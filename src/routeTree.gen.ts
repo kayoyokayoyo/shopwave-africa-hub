@@ -13,9 +13,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as BSlugRouteImport } from './routes/b.$slug'
+import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
+import { Route as AuthenticatedAdminBoutiquesRouteImport } from './routes/_authenticated/admin.boutiques'
+import { Route as AuthenticatedAdminCommercantsRouteImport } from './routes/_authenticated/admin.commercants'
+import { Route as AuthenticatedAdminPaiementsRouteImport } from './routes/_authenticated/admin.paiements'
+import { Route as AuthenticatedAdminParametresRouteImport } from './routes/_authenticated/admin.parametres'
+import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authenticated/admin.plans'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
 import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
@@ -43,6 +50,11 @@ const ResetPasswordRoute = ResetPasswordRouteImport.update({
   path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -57,6 +69,40 @@ const BSlugRoute = BSlugRouteImport.update({
   id: '/b/$slug',
   path: '/b/$slug',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedAdminBoutiquesRoute =
+  AuthenticatedAdminBoutiquesRouteImport.update({
+    id: '/boutiques',
+    path: '/boutiques',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminCommercantsRoute =
+  AuthenticatedAdminCommercantsRouteImport.update({
+    id: '/commercants',
+    path: '/commercants',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminPaiementsRoute =
+  AuthenticatedAdminPaiementsRouteImport.update({
+    id: '/paiements',
+    path: '/paiements',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminParametresRoute =
+  AuthenticatedAdminParametresRouteImport.update({
+    id: '/parametres',
+    path: '/parametres',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminPlansRoute = AuthenticatedAdminPlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
 const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
@@ -102,12 +148,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/b/$slug': typeof BSlugRouteWithChildren
+  '/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
+  '/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
+  '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/admin/parametres': typeof AuthenticatedAdminParametresRoute
+  '/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
@@ -118,9 +171,15 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
+  '/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
+  '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/admin/parametres': typeof AuthenticatedAdminParametresRoute
+  '/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
@@ -132,12 +191,19 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/b/$slug': typeof BSlugRouteWithChildren
+  '/_authenticated/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
+  '/_authenticated/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
+  '/_authenticated/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
+  '/_authenticated/admin/parametres': typeof AuthenticatedAdminParametresRoute
+  '/_authenticated/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
@@ -149,12 +215,19 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/admin'
     | '/dashboard'
     | '/onboarding'
     | '/b/$slug'
+    | '/admin/boutiques'
+    | '/admin/commercants'
+    | '/admin/paiements'
+    | '/admin/parametres'
+    | '/admin/plans'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
     | '/dashboard/produits'
+    | '/admin/'
     | '/dashboard/'
     | '/b/$slug/'
     | '/api/public/media/$'
@@ -165,9 +238,15 @@ export interface FileRouteTypes {
     | '/auth'
     | '/reset-password'
     | '/onboarding'
+    | '/admin/boutiques'
+    | '/admin/commercants'
+    | '/admin/paiements'
+    | '/admin/parametres'
+    | '/admin/plans'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
     | '/dashboard/produits'
+    | '/admin'
     | '/dashboard'
     | '/b/$slug'
     | '/api/public/media/$'
@@ -178,12 +257,19 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
     | '/b/$slug'
+    | '/_authenticated/admin/boutiques'
+    | '/_authenticated/admin/commercants'
+    | '/_authenticated/admin/paiements'
+    | '/_authenticated/admin/parametres'
+    | '/_authenticated/admin/plans'
     | '/_authenticated/dashboard/boutique'
     | '/_authenticated/dashboard/commandes'
     | '/_authenticated/dashboard/produits'
+    | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
     | '/b/$slug/'
     | '/api/public/media/$'
@@ -229,6 +315,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/admin': {
+      id: '/_authenticated/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -249,6 +342,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/b/$slug'
       preLoaderRoute: typeof BSlugRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/admin/': {
+      id: '/_authenticated/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/boutiques': {
+      id: '/_authenticated/admin/boutiques'
+      path: '/boutiques'
+      fullPath: '/admin/boutiques'
+      preLoaderRoute: typeof AuthenticatedAdminBoutiquesRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/commercants': {
+      id: '/_authenticated/admin/commercants'
+      path: '/commercants'
+      fullPath: '/admin/commercants'
+      preLoaderRoute: typeof AuthenticatedAdminCommercantsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/paiements': {
+      id: '/_authenticated/admin/paiements'
+      path: '/paiements'
+      fullPath: '/admin/paiements'
+      preLoaderRoute: typeof AuthenticatedAdminPaiementsRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/parametres': {
+      id: '/_authenticated/admin/parametres'
+      path: '/parametres'
+      fullPath: '/admin/parametres'
+      preLoaderRoute: typeof AuthenticatedAdminParametresRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/admin/plans': {
+      id: '/_authenticated/admin/plans'
+      path: '/plans'
+      fullPath: '/admin/plans'
+      preLoaderRoute: typeof AuthenticatedAdminPlansRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
     }
     '/_authenticated/dashboard/': {
       id: '/_authenticated/dashboard/'
@@ -302,6 +437,27 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminBoutiquesRoute: typeof AuthenticatedAdminBoutiquesRoute
+  AuthenticatedAdminCommercantsRoute: typeof AuthenticatedAdminCommercantsRoute
+  AuthenticatedAdminPaiementsRoute: typeof AuthenticatedAdminPaiementsRoute
+  AuthenticatedAdminParametresRoute: typeof AuthenticatedAdminParametresRoute
+  AuthenticatedAdminPlansRoute: typeof AuthenticatedAdminPlansRoute
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminBoutiquesRoute: AuthenticatedAdminBoutiquesRoute,
+  AuthenticatedAdminCommercantsRoute: AuthenticatedAdminCommercantsRoute,
+  AuthenticatedAdminPaiementsRoute: AuthenticatedAdminPaiementsRoute,
+  AuthenticatedAdminParametresRoute: AuthenticatedAdminParametresRoute,
+  AuthenticatedAdminPlansRoute: AuthenticatedAdminPlansRoute,
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardBoutiqueRoute: typeof AuthenticatedDashboardBoutiqueRoute
   AuthenticatedDashboardCommandesRoute: typeof AuthenticatedDashboardCommandesRoute
@@ -323,11 +479,13 @@ const AuthenticatedDashboardRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRouteWithChildren
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRouteWithChildren,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
 }
