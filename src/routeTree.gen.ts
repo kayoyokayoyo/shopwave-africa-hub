@@ -15,11 +15,14 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
 import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
+import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
+import { Route as BSlugPProductIdRouteImport } from './routes/b.$slug.p.$productId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -50,6 +53,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const BSlugRoute = BSlugRouteImport.update({
+  id: '/b/$slug',
+  path: '/b/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
     id: '/',
@@ -74,10 +82,20 @@ const AuthenticatedDashboardProduitsRoute =
     path: '/produits',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const BSlugIndexRoute = BSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BSlugRoute,
+} as any)
 const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
   id: '/api/public/media/$',
   path: '/api/public/media/$',
   getParentRoute: () => rootRouteImport,
+} as any)
+const BSlugPProductIdRoute = BSlugPProductIdRouteImport.update({
+  id: '/p/$productId',
+  path: '/p/$productId',
+  getParentRoute: () => BSlugRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -86,11 +104,14 @@ export interface FileRoutesByFullPath {
   '/reset-password': typeof ResetPasswordRoute
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/b/$slug': typeof BSlugRouteWithChildren
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/b/$slug/': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
+  '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -101,7 +122,9 @@ export interface FileRoutesByTo {
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
+  '/b/$slug': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
+  '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -111,11 +134,14 @@ export interface FileRoutesById {
   '/reset-password': typeof ResetPasswordRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/b/$slug': typeof BSlugRouteWithChildren
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
+  '/b/$slug/': typeof BSlugIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
+  '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -125,11 +151,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/dashboard'
     | '/onboarding'
+    | '/b/$slug'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
     | '/dashboard/produits'
     | '/dashboard/'
+    | '/b/$slug/'
     | '/api/public/media/$'
+    | '/b/$slug/p/$productId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,7 +169,9 @@ export interface FileRouteTypes {
     | '/dashboard/commandes'
     | '/dashboard/produits'
     | '/dashboard'
+    | '/b/$slug'
     | '/api/public/media/$'
+    | '/b/$slug/p/$productId'
   id:
     | '__root__'
     | '/'
@@ -149,11 +180,14 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
+    | '/b/$slug'
     | '/_authenticated/dashboard/boutique'
     | '/_authenticated/dashboard/commandes'
     | '/_authenticated/dashboard/produits'
     | '/_authenticated/dashboard/'
+    | '/b/$slug/'
     | '/api/public/media/$'
+    | '/b/$slug/p/$productId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -161,6 +195,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  BSlugRoute: typeof BSlugRouteWithChildren
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
 }
 
@@ -208,6 +243,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/b/$slug': {
+      id: '/b/$slug'
+      path: '/b/$slug'
+      fullPath: '/b/$slug'
+      preLoaderRoute: typeof BSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authenticated/dashboard/': {
       id: '/_authenticated/dashboard/'
       path: '/'
@@ -236,12 +278,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardProduitsRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/b/$slug/': {
+      id: '/b/$slug/'
+      path: '/'
+      fullPath: '/b/$slug/'
+      preLoaderRoute: typeof BSlugIndexRouteImport
+      parentRoute: typeof BSlugRoute
+    }
     '/api/public/media/$': {
       id: '/api/public/media/$'
       path: '/api/public/media/$'
       fullPath: '/api/public/media/$'
       preLoaderRoute: typeof ApiPublicMediaSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/b/$slug/p/$productId': {
+      id: '/b/$slug/p/$productId'
+      path: '/p/$productId'
+      fullPath: '/b/$slug/p/$productId'
+      preLoaderRoute: typeof BSlugPProductIdRouteImport
+      parentRoute: typeof BSlugRoute
     }
   }
 }
@@ -279,11 +335,24 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface BSlugRouteChildren {
+  BSlugIndexRoute: typeof BSlugIndexRoute
+  BSlugPProductIdRoute: typeof BSlugPProductIdRoute
+}
+
+const BSlugRouteChildren: BSlugRouteChildren = {
+  BSlugIndexRoute: BSlugIndexRoute,
+  BSlugPProductIdRoute: BSlugPProductIdRoute,
+}
+
+const BSlugRouteWithChildren = BSlugRoute._addFileChildren(BSlugRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  BSlugRoute: BSlugRouteWithChildren,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
 }
 export const routeTree = rootRouteImport
