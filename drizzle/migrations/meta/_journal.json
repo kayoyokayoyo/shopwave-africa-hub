@@ -15,6 +15,13 @@
       "when": 1791354017161,
       "tag": "0001_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791450130591,
+      "tag": "0002_plans_admin",
+      "breakpoints": true
     }
   ]
 }
