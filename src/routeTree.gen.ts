@@ -17,6 +17,8 @@ import { Route as AuthenticatedDashboardRouteImport } from './routes/_authentica
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
+import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
+import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 
 const IndexRoute = IndexRouteImport.update({
@@ -60,6 +62,18 @@ const AuthenticatedDashboardBoutiqueRoute =
     path: '/boutique',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardCommandesRoute =
+  AuthenticatedDashboardCommandesRouteImport.update({
+    id: '/commandes',
+    path: '/commandes',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
+const AuthenticatedDashboardProduitsRoute =
+  AuthenticatedDashboardProduitsRouteImport.update({
+    id: '/produits',
+    path: '/produits',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
   id: '/api/public/media/$',
   path: '/api/public/media/$',
@@ -73,6 +87,8 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
+  '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
 }
@@ -82,6 +98,8 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
+  '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
 }
@@ -94,6 +112,8 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
+  '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
 }
@@ -106,6 +126,8 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/onboarding'
     | '/dashboard/boutique'
+    | '/dashboard/commandes'
+    | '/dashboard/produits'
     | '/dashboard/'
     | '/api/public/media/$'
   fileRoutesByTo: FileRoutesByTo
@@ -115,6 +137,8 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/onboarding'
     | '/dashboard/boutique'
+    | '/dashboard/commandes'
+    | '/dashboard/produits'
     | '/dashboard'
     | '/api/public/media/$'
   id:
@@ -126,6 +150,8 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
     | '/_authenticated/dashboard/boutique'
+    | '/_authenticated/dashboard/commandes'
+    | '/_authenticated/dashboard/produits'
     | '/_authenticated/dashboard/'
     | '/api/public/media/$'
   fileRoutesById: FileRoutesById
@@ -196,6 +222,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardBoutiqueRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/commandes': {
+      id: '/_authenticated/dashboard/commandes'
+      path: '/commandes'
+      fullPath: '/dashboard/commandes'
+      preLoaderRoute: typeof AuthenticatedDashboardCommandesRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
+    '/_authenticated/dashboard/produits': {
+      id: '/_authenticated/dashboard/produits'
+      path: '/produits'
+      fullPath: '/dashboard/produits'
+      preLoaderRoute: typeof AuthenticatedDashboardProduitsRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/api/public/media/$': {
       id: '/api/public/media/$'
       path: '/api/public/media/$'
@@ -208,12 +248,16 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardBoutiqueRoute: typeof AuthenticatedDashboardBoutiqueRoute
+  AuthenticatedDashboardCommandesRoute: typeof AuthenticatedDashboardCommandesRoute
+  AuthenticatedDashboardProduitsRoute: typeof AuthenticatedDashboardProduitsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
 }
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
   {
     AuthenticatedDashboardBoutiqueRoute: AuthenticatedDashboardBoutiqueRoute,
+    AuthenticatedDashboardCommandesRoute: AuthenticatedDashboardCommandesRoute,
+    AuthenticatedDashboardProduitsRoute: AuthenticatedDashboardProduitsRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   }
 
