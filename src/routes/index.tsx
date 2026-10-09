@@ -36,8 +36,8 @@ function Index() {
       <header className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
         <Logo />
         <div className="flex gap-2">
-          <Button variant="ghost" asChild><Link to="/auth">Connexion</Link></Button>
-          <Button asChild className="hidden sm:inline-flex"><Link to="/auth">Créer ma boutique</Link></Button>
+          <Button variant="ghost" asChild><Link to="/auth" search={{ mode: "login" }}>Connexion</Link></Button>
+          <Button asChild className="hidden sm:inline-flex"><Link to="/auth" search={{ mode: "signup" }}>Créer ma boutique</Link></Button>
         </div>
       </header>
 
@@ -48,7 +48,7 @@ function Index() {
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-lg text-muted-foreground">Publiez vos produits, partagez votre lien et vendez plus — sans site compliqué ni commission.</p>
         <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button size="lg" asChild className="shadow-lift"><Link to="/auth"><Store />Créer ma boutique gratuite</Link></Button>
+          <Button size="lg" asChild className="shadow-lift"><Link to="/auth" search={{ mode: "signup" }}><Store />Créer ma boutique gratuite</Link></Button>
         </div>
         <p className="mt-3 text-sm text-muted-foreground">Gratuit, sans carte bancaire.</p>
       </section>
@@ -90,7 +90,7 @@ function Index() {
                   {p.advanced_stats && <li className="flex gap-2"><Check className="h-4 w-4 text-primary" />Statistiques avancées</li>}
                   {p.meta_access && <li className="flex gap-2"><Check className="h-4 w-4 text-primary" />Publication Facebook & Instagram</li>}
                 </ul>
-                <Button asChild className="mt-6 w-full" variant={p.id === "pro" ? "default" : "outline"}><Link to="/auth">Commencer</Link></Button>
+                <Button asChild className="mt-6 w-full" variant={p.id === "pro" ? "default" : "outline"}><Link to="/auth" search={{ mode: "signup" }}>Commencer</Link></Button>
               </div>
             ))}
           </div>
