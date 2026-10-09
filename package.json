@@ -11,7 +11,12 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:link": "supabase link",
+    "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1 -List",
+    "db:dry-run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1 -DryRun",
+    "db:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1",
+    "admin:create": "node scripts/create-admin.mjs"
   },
   "overrides": {
     "rolldown": "1.2.1"

@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { Home, Package, Palette, ShoppingBag, LogOut, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Logo } from "@/components/Logo";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -18,10 +19,14 @@ const NAV = [
 
 function DashboardLayout() {
   const { data: shop, isLoading } = useMyShop();
+  const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const navigate = useNavigate();
-  useEffect(() => { if (!isLoading && !shop) navigate({ to: "/onboarding" }); }, [isLoading, shop, navigate]);
+  useEffect(() => {
+    if (isAdmin) navigate({ to: "/admin" });
+    else if (!isAdminLoading && !isLoading && !shop) navigate({ to: "/onboarding" });
+  }, [isAdmin, isAdminLoading, isLoading, shop, navigate]);
 
-  if (isLoading || !shop) return <div className="grid min-h-screen place-items-center text-muted-foreground">Chargement…</div>;
+  if (isAdminLoading || isLoading || !shop || isAdmin) return <div className="grid min-h-screen place-items-center text-muted-foreground">Chargement…</div>;
 
   return (
     <div className="min-h-screen bg-background lg:flex">

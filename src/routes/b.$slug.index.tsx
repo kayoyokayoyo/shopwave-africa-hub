@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { PackageSearch, Search } from "lucide-react";
 import { publicShopQuery } from "@/lib/storefront.query";
 import { StoreHeader, ProductCard } from "@/components/store/StoreParts";
 import { ShareButtons } from "@/components/store/ShareButtons";
@@ -37,7 +37,7 @@ function ShopHome() {
     <div>
       <StoreHeader shop={shop} />
       <div className="mx-auto max-w-5xl px-4">
-        <div className="mt-4"><ShareButtons url={`${origin}/b/${shop.slug}`} text={`Découvrez ${shop.name} :`} /></div>
+        <div className="mt-3"><ShareButtons url={`${origin}/b/${shop.slug}`} text={`Découvrez ${shop.name} :`} /></div>
 
         {!filtering && featured.length > 0 && (
           <section className="mt-8">
@@ -53,8 +53,17 @@ function ShopHome() {
           </section>
         )}
 
-        <section className="mt-8">
-          <div className="flex h-12 items-center gap-2 rounded-shop border border-current/15 bg-shop-card px-3">
+        <section className="mt-7 sm:mt-9">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[.16em] text-shop">La sélection</p>
+              <h2 className="mt-1 font-shop-heading text-2xl font-extrabold sm:text-3xl">Nos produits</h2>
+            </div>
+            <span className="rounded-full bg-shop-card px-3 py-1.5 text-xs font-semibold text-shop-muted shadow-soft">
+              {products.length} {products.length === 1 ? "article" : "articles"}
+            </span>
+          </div>
+          <div className="flex h-12 items-center gap-2 rounded-shop border border-current/15 bg-shop-card px-3 shadow-soft transition focus-within:border-shop/50 focus-within:ring-2 focus-within:ring-shop/10">
             <Search className="h-4 w-4 text-shop-muted" />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Rechercher un produit" className="h-full flex-1 bg-transparent text-sm outline-none" />
           </div>
@@ -68,7 +77,18 @@ function ShopHome() {
             </select>
             <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value.replace(/[^\d.]/g, ""))} inputMode="decimal" placeholder="Prix max" className="h-10 w-28 rounded-shop border border-current/15 bg-shop-card px-3 text-sm" />
           </div>
-          {list.length === 0 ? <p className="py-12 text-center text-shop-muted">Aucun produit trouvé.</p> : (
+          {list.length === 0 ? (
+            <div className="mt-5 rounded-shop border border-current/10 bg-shop-card px-5 py-12 text-center shadow-soft sm:py-16">
+              <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-shop/10 text-shop"><PackageSearch className="h-7 w-7" /></div>
+              <h3 className="mt-4 font-shop-heading text-lg font-bold">{products.length === 0 ? "Les nouveautés arrivent bientôt" : "Aucun produit trouvé"}</h3>
+              <p className="mx-auto mt-1 max-w-sm text-sm leading-relaxed text-shop-muted">
+                {products.length === 0
+                  ? "La boutique prépare sa sélection. Revenez bientôt pour découvrir les produits."
+                  : "Essayez un autre mot-clé ou modifiez vos filtres pour voir plus de produits."}
+              </p>
+              {filtering && <button onClick={() => { setQ(""); setCat(null); setSort(""); setMaxPrice(""); }} className="mt-4 h-10 rounded-full bg-shop px-4 text-sm font-semibold text-shop-foreground">Effacer les filtres</button>}
+            </div>
+          ) : (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {list.map((p) => (
                 <ProductCard key={p.id} product={p}

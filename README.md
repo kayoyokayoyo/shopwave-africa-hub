@@ -208,11 +208,52 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Pour travailler sur le projet en local, installez Bun et ses dépendances depuis PowerShell :
 
-```sh
+```powershell
+irm bun.sh/install.ps1 | iex
+$env:Path += ";$env:USERPROFILE\.bun\bin"
+
 git clone <this-repository-url>
 cd <repository-name>
-npm i
-npm run dev
+bun install
+bun run dev
 ```
+
+`bun install` installe les dépendances définies par le projet. `bun run dev` démarre le serveur ; ouvrez l’adresse locale affichée dans le terminal. Si Bun était déjà installé, les deux premières commandes ne sont pas nécessaires.
+
+## Migrations Supabase
+
+Les migrations de la base sont gérées exclusivement par les fichiers de `supabase/migrations`. Configurez `LOVABLE_DB_MIGRATION_URL` dans `.env` avec l’URI **Session pooler** du bon projet (port 5432), puis connectez la CLI à ce projet avec `supabase login` et `supabase link --project-ref <project-ref>`. Depuis PowerShell, à la racine du dépôt, utilisez :
+
+```powershell
+bun run db:status
+bun run db:dry-run
+bun run db:push
+```
+
+`db:push` applique automatiquement les migrations en attente. N’utilisez pas `drizzle-kit migrate` ni le SQL Editor pour ce projet : les migrations Drizzle historiques dupliquent les fichiers Supabase.
+
+### Créer ou promouvoir un administrateur
+
+Ajoutez ces variables dans le fichier local `.env` (ignoré par Git) :
+
+```dotenv
+MARKETNET_ADMIN_EMAIL=admin@example.com
+MARKETNET_ADMIN_PASSWORD=un-secret-de-8-caracteres-minimum
+MARKETNET_ADMIN_NAME=Administrateur MarketNet
+```
+
+Le script lit aussi `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` depuis le même `.env`. `MARKETNET_ADMIN_PASSWORD` doit contenir au moins 8 caractères, dont au moins 6 distincts. Utilisez un mot de passe robuste et unique; ne le collez jamais dans le chat ou dans Git.
+
+Depuis PowerShell, à la racine du projet, lancez :
+
+```powershell
+bun run admin:create
+```
+
+Le script utilise la clé `SUPABASE_SERVICE_ROLE_KEY`, qui contourne les protections RLS : ne l’exécutez que localement et ne partagez jamais cette clé. Il crée le compte Auth ou active celui qui existe, définit le mot de passe de `.env`, marque l’email confirmé sans envoyer de mail, puis attribue uniquement le rôle `admin`. Si l’adresse existait comme commerçant, ses autres rôles sont retirés. Le compte est mis à jour en place, sans supprimer son UUID ni ses données liées.
+
+**Attention :** relancer le script change à nouveau le mot de passe pour la valeur actuellement configurée dans `.env`. Après un bootstrap, retirez ou remplacez ce secret local et changez le mot de passe depuis un gestionnaire de secrets avant tout usage partagé. La confirmation immédiate concerne uniquement ce script administrateur; les inscriptions commerçants ordinaires continuent d’exiger la confirmation par email.
+
+Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, définissez temporairement `MARKETNET_RESTORE_MERCHANT_EMAIL` dans l’environnement de PowerShell avant d’exécuter le script. Le compte restauré perd alors ses autres rôles et reçoit uniquement `merchant`.
