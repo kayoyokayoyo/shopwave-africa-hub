@@ -112,7 +112,6 @@ alter table public.app_settings enable row level security;
 create policy "settings read" on public.app_settings for select to anon, authenticated using (true);
 create policy "settings admin" on public.app_settings for all to authenticated using (public.has_role(auth.uid(),'admin')) with check (public.has_role(auth.uid(),'admin'));
 insert into public.app_settings values
- ('require_approval','false'::jsonb),
  ('legal_terms','"Conditions générales d''utilisation de MarketNet."'::jsonb),
  ('payment_instructions','"Envoyez le montant au +243 000 000 000 (M-Pesa / Airtel / Orange) puis saisissez la référence de la transaction."'::jsonb);
 
@@ -134,10 +133,8 @@ create policy "report admin upd" on public.shop_reports for update to authentica
 -- profile status: pending when approval required
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
-declare req boolean;
 begin
-  select coalesce((value)::text::boolean,false) into req from public.app_settings where key='require_approval';
-  insert into public.profiles(id, full_name, email, status) values (new.id, new.raw_user_meta_data->>'full_name', new.email, case when coalesce(req,false) then 'pending' else 'active' end);
+  insert into public.profiles(id, full_name, email, status) values (new.id, new.raw_user_meta_data->>'full_name', new.email, 'active');
   insert into public.user_roles(user_id, role) values (new.id, 'merchant');
   return new;
 end $$;

@@ -28,10 +28,7 @@ function Settings() {
     <div className="grid gap-8 lg:grid-cols-2">
       <section className="space-y-5">
         <h1 className="text-2xl font-extrabold">Paramètres</h1>
-        <div className="flex items-center justify-between rounded-2xl border bg-card p-4">
-          <div><p className="font-semibold">Validation des inscriptions</p><p className="text-sm text-muted-foreground">Les nouveaux commerçants attendent votre accord</p></div>
-          <Switch checked={settings?.require_approval === true} onCheckedChange={(v) => put("require_approval", v)} />
-        </div>
+
         <div className="space-y-2"><Label>Instructions de paiement (mobile money)</Label><Textarea rows={3} value={pay} onChange={(e) => setPay(e.target.value)} /><Button size="sm" onClick={() => put("payment_instructions", pay)}>Enregistrer</Button></div>
         <div className="space-y-2"><Label>Textes légaux</Label><Textarea rows={6} value={terms} onChange={(e) => setTerms(e.target.value)} /><Button size="sm" onClick={() => put("legal_terms", terms)}>Enregistrer</Button></div>
       </section>

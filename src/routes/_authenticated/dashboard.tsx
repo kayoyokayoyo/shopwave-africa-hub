@@ -30,20 +30,22 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-background lg:flex">
-      <aside className="hidden w-64 shrink-0 flex-col border-r bg-sidebar p-5 lg:flex">
-        <Logo />
-        <nav className="mt-8 flex-1 space-y-1">
-          {NAV.map((n) => (
-            <Link key={n.to} to={n.to} activeOptions={{ exact: "exact" in n }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent"
-              activeProps={{ className: "bg-sidebar-accent text-sidebar-foreground font-semibold" }}>
-              <n.icon className="h-4 w-4" />{n.label}
-            </Link>
-          ))}
-        </nav>
-        <button onClick={() => supabase.auth.signOut()} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent"><LogOut className="h-4 w-4" />Déconnexion</button>
+      <aside className="hidden w-[260px] shrink-0 border-r bg-sidebar lg:block">
+        <div className="fixed inset-y-0 flex w-[260px] flex-col p-5">
+          <Logo />
+          <nav className="mt-8 flex-1 space-y-1 overflow-y-auto">
+            {NAV.map((n) => (
+              <Link key={n.to} to={n.to} activeOptions={{ exact: "exact" in n }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent"
+                activeProps={{ className: "bg-sidebar-accent text-sidebar-foreground font-semibold" }}>
+                <n.icon className="h-4 w-4" />{n.label}
+              </Link>
+            ))}
+          </nav>
+          <button onClick={() => supabase.auth.signOut()} className="flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent"><LogOut className="h-4 w-4" />Déconnexion</button>
+        </div>
       </aside>
 
-      <div className="flex-1 pb-24 lg:pb-0">
+      <div className="flex flex-1 flex-col min-w-0 pb-24 lg:pb-0">
         <header className="sticky top-0 z-20 flex items-center justify-between border-b bg-background/90 px-4 py-3 backdrop-blur lg:px-8">
           <div className="lg:hidden"><Logo /></div>
           <p className="hidden truncate font-semibold lg:block">{shop.name}</p>
@@ -54,7 +56,7 @@ function DashboardLayout() {
             <button onClick={() => supabase.auth.signOut()} aria-label="Déconnexion" className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground lg:hidden"><LogOut className="h-4 w-4" /></button>
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-4 py-6 lg:px-8"><Outlet /></main>
+        <main className="mx-auto max-w-7xl w-full px-4 py-6 lg:px-8"><Outlet /></main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
