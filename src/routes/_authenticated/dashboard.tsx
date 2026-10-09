@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
-import { Home, Package, Palette, ShoppingBag, LogOut, ExternalLink } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Home, Package, Palette, ShoppingBag, LogOut, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Logo } from "@/components/Logo";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardLayout,
@@ -21,6 +22,18 @@ function DashboardLayout() {
   const { data: shop, isLoading } = useMyShop();
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const navigate = useNavigate();
+
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("merchant-sidebar-collapsed") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("merchant-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
+
   useEffect(() => {
     if (isAdmin) navigate({ to: "/admin" });
     else if (!isAdminLoading && !isLoading && !shop) navigate({ to: "/onboarding" });
@@ -30,18 +43,39 @@ function DashboardLayout() {
 
   return (
     <div className="min-h-screen bg-background lg:flex">
-      <aside className="hidden w-[260px] shrink-0 border-r bg-sidebar lg:block">
-        <div className="fixed inset-y-0 flex w-[260px] flex-col p-5">
-          <Logo />
+      <aside className={cn("hidden shrink-0 border-r bg-sidebar lg:block transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
+        <div className={cn("fixed inset-y-0 flex flex-col p-5 transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
+          <div className={cn("flex items-center h-8", collapsed ? "justify-center" : "justify-between")}>
+            {!collapsed && <Logo />}
+            {collapsed && <div className="grid h-8 w-8 place-items-center rounded bg-primary text-primary-foreground font-bold">M</div>}
+            <button onClick={() => setCollapsed(!collapsed)} className={cn("grid h-8 w-8 place-items-center rounded-md hover:bg-sidebar-accent text-muted-foreground", collapsed && "hidden sm:grid")}>
+              {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+            </button>
+          </div>
+          
           <nav className="mt-8 flex-1 space-y-1 overflow-y-auto">
             {NAV.map((n) => (
-              <Link key={n.to} to={n.to} activeOptions={{ exact: "exact" in n }} className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent"
-                activeProps={{ className: "bg-sidebar-accent text-sidebar-foreground font-semibold" }}>
-                <n.icon className="h-4 w-4" />{n.label}
+              <Link 
+                key={n.to} 
+                to={n.to} 
+                activeOptions={{ exact: "exact" in n }} 
+                className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent", collapsed ? "justify-center" : "gap-3")}
+                activeProps={{ className: "bg-sidebar-accent text-sidebar-foreground font-semibold" }}
+                title={collapsed ? n.label : undefined}
+              >
+                <n.icon className="h-5 w-5 shrink-0" />
+                {!collapsed && <span>{n.label}</span>}
               </Link>
             ))}
           </nav>
-          <button onClick={() => supabase.auth.signOut()} className="flex shrink-0 items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent"><LogOut className="h-4 w-4" />Déconnexion</button>
+          <button 
+            onClick={() => supabase.auth.signOut()} 
+            className={cn("flex shrink-0 items-center rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent", collapsed ? "justify-center" : "gap-3")}
+            title={collapsed ? "Déconnexion" : undefined}
+          >
+            <LogOut className="h-5 w-5 shrink-0" />
+            {!collapsed && <span>Déconnexion</span>}
+          </button>
         </div>
       </aside>
 

@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/Logo";
-import { Menu, LayoutDashboard, Users, Store, CreditCard, Layers, Settings, ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { Menu, LayoutDashboard, Users, Store, CreditCard, Layers, Settings, ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: async ({ context }) => {
@@ -24,11 +25,17 @@ const NAV = [
   { to: "/admin/parametres", label: "Paramètres", icon: Settings },
 ] as const;
 
-function SidebarContent({ onClose }: { onClose?: () => void }) {
+function SidebarContent({ onClose, collapsed = false, onToggle }: { onClose?: () => void; collapsed?: boolean; onToggle?: () => void }) {
   return (
-    <div className="flex h-full flex-col bg-card border-r">
-      <div className="flex h-16 shrink-0 items-center gap-3 px-6 border-b">
-        <Logo />
+    <div className="flex h-full flex-col bg-card border-r transition-all duration-300">
+      <div className={cn("flex h-16 shrink-0 items-center px-6 border-b", collapsed ? "justify-center px-0" : "justify-between")}>
+        {!collapsed && <Logo />}
+        {collapsed && <div className="grid h-8 w-8 place-items-center rounded bg-primary text-primary-foreground font-bold">M</div>}
+        {onToggle && (
+          <button onClick={onToggle} className={cn("grid h-8 w-8 place-items-center rounded-md hover:bg-muted text-muted-foreground", collapsed && "hidden sm:grid")}>
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        )}
       </div>
       <nav className="flex-1 space-y-1.5 overflow-y-auto p-4">
         {NAV.map((n) => {
@@ -39,19 +46,20 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
               to={n.to} 
               onClick={onClose}
               activeOptions={{ exact: true }} 
-              className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted" 
+              className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted", collapsed ? "justify-center" : "gap-3")} 
               activeProps={{ className: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" }}
+              title={collapsed ? n.label : undefined}
             >
-              <Icon className="h-5 w-5" />
-              {n.label}
+              <Icon className="h-5 w-5 shrink-0" />
+              {!collapsed && <span>{n.label}</span>}
             </Link>
           );
         })}
       </nav>
       <div className="p-4 border-t">
-        <Link to="/dashboard" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted">
-          <ArrowLeft className="h-5 w-5" />
-          Quitter l'admin
+        <Link to="/dashboard" title={collapsed ? "Quitter l'admin" : undefined} className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted", collapsed ? "justify-center" : "gap-3")}>
+          <ArrowLeft className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>Quitter l'admin</span>}
         </Link>
       </div>
     </div>
@@ -60,13 +68,23 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 
 function AdminLayout() {
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("admin-sidebar-collapsed") === "true";
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    localStorage.setItem("admin-sidebar-collapsed", String(collapsed));
+  }, [collapsed]);
   
   return (
     <div className="flex min-h-screen bg-background md:bg-muted/30">
       {/* Desktop Sidebar */}
-      <aside className="hidden w-[260px] shrink-0 lg:block">
-        <div className="fixed inset-y-0 w-[260px]">
-          <SidebarContent />
+      <aside className={cn("hidden shrink-0 lg:block transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
+        <div className={cn("fixed inset-y-0 transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
+          <SidebarContent collapsed={collapsed} onToggle={() => setCollapsed(!collapsed)} />
         </div>
       </aside>
 

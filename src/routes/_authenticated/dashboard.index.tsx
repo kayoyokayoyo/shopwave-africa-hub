@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Copy, Eye, Package, Plus, ShoppingBag, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
@@ -19,8 +20,21 @@ function Overview() {
     enabled: !!shop,
     queryFn: async () => (await supabase.from("orders").select("*").eq("shop_id", shop!.id).order("created_at", { ascending: false })).data ?? [],
   });
+  const [userName, setUserName] = useState("");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserName(data.user?.user_metadata?.full_name || "");
+    });
+  }, []);
+
   if (!shop) return null;
   const url = typeof window !== "undefined" ? `${window.location.origin}/b/${shop.slug}` : `/b/${shop.slug}`;
+  
+  const hour = new Date().getHours();
+  let greeting = "Bonjour";
+  if (hour >= 18 || hour < 5) greeting = "Bonsoir";
+  else if (hour >= 12 && hour < 18) greeting = "Bon après-midi";
+
   const stats = [
     { label: "Vues", value: shop.views, icon: Eye },
     { label: "Produits", value: products?.length ?? 0, icon: Package },
@@ -30,8 +44,10 @@ function Overview() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold sm:text-3xl">Bonjour 👋</h1>
-        <p className="text-muted-foreground">Voici l'activité de {shop.name}.</p>
+        <h1 className="text-2xl font-extrabold sm:text-3xl">
+          {greeting}{userName ? ` ${userName}` : ""} 👋
+        </h1>
+        <p className="text-muted-foreground mt-1">Voici l'activité de <strong className="text-foreground">{shop.name}</strong>.</p>
       </div>
       <div className="rounded-2xl bg-gradient-warm p-5 text-primary-foreground shadow-lift">
         <p className="text-sm opacity-90">Lien de votre boutique</p>

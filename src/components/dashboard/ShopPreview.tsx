@@ -31,7 +31,7 @@ export function ShopPreview({ draft, products }: { draft: ShopDraft; products?: 
       </div>
       <div className={cn("mx-auto overflow-hidden rounded-[2rem] border-8 border-foreground/90 shadow-lift transition-all", device === "mobile" ? "max-w-[340px]" : "max-w-full rounded-xl border-4")}>
         <div className={cn(`theme-${draft.theme}`, "storefront h-[560px] overflow-y-auto")} style={shopStyle(draft.primary_color)}>
-          <StoreHeader shop={{ ...draft, name: draft.name || "Ma boutique" }} compact={device === "mobile"} />
+          <StoreHeader shop={{ ...draft, name: draft.name || "Ma boutique" }} />
           <div className={cn("mx-auto grid max-w-5xl gap-3 p-4", device === "mobile" ? "grid-cols-2" : "grid-cols-3 lg:grid-cols-4")}>
             {list.map((p, i) => <ProductCard key={i} product={p as Product} onAdd={() => {}} />)}
           </div>

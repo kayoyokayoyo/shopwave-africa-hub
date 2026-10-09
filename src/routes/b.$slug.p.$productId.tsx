@@ -5,7 +5,7 @@ import { ArrowLeft, Minus, Plus, ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
 import { publicShopQuery } from "@/lib/storefront.query";
 import { useCart } from "@/components/store/cart";
-import { ShareButtons } from "@/components/store/ShareButtons";
+
 import { Button } from "@/components/ui/button";
 import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 import { cn } from "@/lib/utils";
@@ -90,7 +90,7 @@ function ProductPage() {
               <Button variant="shop" size="lg" className="h-12 flex-1" onClick={addToCart}><ShoppingBag />Ajouter au panier</Button>
             </div>
           )}
-          <div className="mt-6"><ShareButtons url={`${data.origin}/b/${slug}/p/${product.id}`} text={`${product.name} chez ${data.shop.name} :`} /></div>
+
         </div>
       </div>
     </div>
