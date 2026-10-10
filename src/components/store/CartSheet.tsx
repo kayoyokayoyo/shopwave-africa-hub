@@ -13,24 +13,41 @@ type ShopInfo = { id: string; name: string; whatsapp: string; slug: string };
 export function CartSheet({ shop, origin, className }: { shop: ShopInfo; origin: string; className?: string }) {
   const { items, setQty, clear, open, setOpen } = useCart();
   const [name, setName] = useState("");
+  const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const totals = cartTotals(items);
   const totalStr = Object.entries(totals).map(([c, v]) => formatPrice(v, c)).join(" + ");
 
   async function order() {
     const customer = name.trim().slice(0, 80);
-    if (!customer) return toast.error("Indiquez votre nom");
+    const addr = address.trim().slice(0, 200);
+    const msgNotes = notes.trim().slice(0, 500);
+
+    if (!customer) return toast.error("Veuillez indiquer votre nom");
+    if (!addr) return toast.error("Veuillez indiquer votre adresse de livraison");
+    
     setBusy(true);
     const currencies = Object.keys(totals);
+    
     // Save the order (best-effort: WhatsApp must open even if saving fails)
     await supabase.from("orders").insert({
-      shop_id: shop.id, customer_name: customer,
-      items: items.map((i) => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, variant: i.variant ?? null })),
+      shop_id: shop.id, 
+      customer_name: `${customer} - ${addr}`,
+      items: items.map((i) => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, currency: i.currency, variant: i.variant ?? null })),
       total: currencies.length === 1 ? totals[currencies[0]] : 0,
       currency: currencies.length === 1 ? currencies[0] : "MIXTE",
     });
-    const lines = items.map((i) => `• ${i.qty} × ${i.name}${i.variant ? ` (${i.variant})` : ""} — ${formatPrice(i.price * i.qty, i.currency)}`);
-    const msg = `Bonjour ${shop.name} 👋\nJe souhaite commander :\n\n${lines.join("\n")}\n\n*Total : ${totalStr}*\n\nNom : ${customer}\n\nVia ${origin}/b/${shop.slug}`;
+
+    const lines = items.map((i) => {
+      return `📦 *${i.qty}x ${i.name}*${i.variant ? ` (${i.variant})` : ""}\n💰 ${formatPrice(i.price * i.qty, i.currency)}`;
+    });
+    
+    let msg = `Bonjour *${shop.name}* 👋\n\nVoici ma commande :\n\n${lines.join("\n\n")}\n\n====================\n*TOTAL : ${totalStr}*\n====================\n\n👤 *Livraison*\n• Nom : ${customer}\n• Adresse : ${addr}`;
+    if (msgNotes) {
+      msg += `\n• Note : ${msgNotes}`;
+    }
+    
     window.open(`https://wa.me/${shop.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(msg)}`, "_blank");
     setBusy(false);
     clear();
@@ -65,7 +82,11 @@ export function CartSheet({ shop, origin, className }: { shop: ShopInfo; origin:
                 </div>
               ))}
               <div className="flex justify-between border-t pt-3 text-lg font-bold"><span>Total</span><span>{totalStr}</span></div>
-              <Input className="h-12" placeholder="Votre nom" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+              <div className="space-y-3 pt-2">
+                <Input className="h-11" placeholder="Votre nom complet" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                <Input className="h-11" placeholder="Adresse complète de livraison" value={address} maxLength={200} onChange={(e) => setAddress(e.target.value)} autoComplete="street-address" />
+                <Input className="h-11" placeholder="Instructions (facultatif)" value={notes} maxLength={500} onChange={(e) => setNotes(e.target.value)} />
+              </div>
               <Button variant="whatsapp" size="lg" className="w-full" onClick={order} disabled={busy}><MessageCircle />Commander sur WhatsApp</Button>
               <p className="text-center text-xs text-muted-foreground">Vous serez redirigé vers WhatsApp avec votre commande pré-remplie.</p>
             </div>

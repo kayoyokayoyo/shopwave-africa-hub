@@ -6,7 +6,7 @@ import { z } from "zod";
 import type { Database } from "@/integrations/supabase/types";
 
 export const getPublicShop = createServerFn({ method: "GET" })
-  .inputValidator((d) => z.object({ slug: z.string().min(1).max(60) }).parse(d))
+  .validator((d) => z.object({ slug: z.string().min(1).max(60) }).parse(d))
   .handler(async ({ data }) => {
     const sb = createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
       auth: { storage: undefined, persistSession: false, autoRefreshToken: false },

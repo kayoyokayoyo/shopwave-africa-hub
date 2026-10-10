@@ -376,8 +376,7 @@ function Index() {
           <Logo />
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} MarketNet. Tous droits réservés.</p>
           <div className="flex gap-4 text-sm text-muted-foreground">
-            <a href="#" className="hover:text-foreground transition-colors">Confidentialité</a>
-            <a href="#" className="hover:text-foreground transition-colors">CGV</a>
+            <Link to="/terms" className="hover:text-foreground transition-colors">CGU & Confidentialité</Link>
           </div>
         </div>
       </footer>

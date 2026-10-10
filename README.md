@@ -234,6 +234,50 @@ bun run db:push
 
 `db:push` applique automatiquement les migrations en attente. N’utilisez pas `drizzle-kit migrate` ni le SQL Editor pour ce projet : les migrations Drizzle historiques dupliquent les fichiers Supabase.
 
+## Médias Cloudinary
+
+Les nouveaux logos, bannières et photos de produits sont compressés en WebP dans le navigateur, puis envoyés directement à Cloudinary avec une signature courte générée par le serveur. Le secret Cloudinary ne quitte jamais le serveur. Les colonnes existantes (`shops.logo_url`, `shops.banner_url` et `products.images`) stockent les URL HTTPS `secure_url` retournées par Cloudinary; aucun changement de schéma SQL n’est requis.
+
+Ajoutez les trois variables suivantes dans `.env` depuis **Cloudinary Console > API Keys** (cloud name depuis le Dashboard). Le modèle est dans [.env.example](.env.example) :
+
+```dotenv
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
+
+Les assets sont rangés dans `marketnet/shops/{owner_id}/storefront` et `marketnet/shops/{owner_id}/products`. Le projet impose un `owner_id` unique sur les boutiques; ce dossier stable représente donc une boutique, y compris pendant l’assistant de création avant que le `shop.id` existe. La signature Cloudinary est produite par une fonction serveur après authentification et le client ne peut pas choisir le dossier d’un autre commerçant.
+
+### Transférer les anciennes images Supabase
+
+Les anciennes références de forme `UUID/UUID.webp` restent servies par la route de compatibilité `/api/public/media/*`. La migration copie les médias référencés dans les champs de boutiques et de produits, puis remplace les références en base par les URL Cloudinary. Le script est réexécutable : il ignore les URL déjà migrées et utilise un identifiant Cloudinary déterministe pour éviter les doublons après un échec partiel.
+
+1. Renseignez également `SUPABASE_URL` et `SUPABASE_SERVICE_ROLE_KEY` dans `.env` (la clé service-role reste secrète).
+2. Vérifiez le périmètre sans modifier de données :
+
+	```powershell
+	npm run media:migrate
+	```
+
+3. Lancez le transfert après avoir vérifié le résumé :
+
+	```powershell
+	npm run media:migrate -- --apply
+	```
+
+4. Pour valider sur un petit lot d’abord, utilisez `npm run media:migrate -- --limit=2 --apply`, puis relancez sans `--limit` pour le reste.
+5. Vérifiez les boutiques publiques et les photos de produits dans Cloudinary avant toute suppression manuelle du bucket `shop-media`. Le script ne supprime aucun objet Supabase; gardez le bucket et la route de compatibilité jusqu’à validation complète et sauvegarde.
+
+## Configuration et état de l’intégration Meta
+
+L’application Meta utilisée pour les tests est **MARKETNET**, App ID `4510252369235039`. Le flux est Facebook Login for Business avec l’URI locale `http://localhost:8080/dashboard/meta`. Les scopes demandés par le code sont `pages_show_list`, `pages_read_engagement`, `pages_manage_posts` et `read_insights`. Les tokens Meta restent dans `meta_connections` et ne sont lus/écrits que par les fonctions serveur après contrôle du propriétaire de la boutique.
+
+Dans Meta for Developers, le cas d’utilisation Pages API (« Tout gérer sur votre Page ») est configuré pour ces autorisations; `read_insights` est disponible **Prête pour le test** et a été accepté dans le dernier consentement du compte de test. Cela permet de tester avec les rôles de l’application, mais ce n’est pas l’accès avancé/public : pour les comptes marchands externes, soumettez les permissions à **App Review** et effectuez la vérification d’entreprise si Meta l’exige. Le statut courant peut être vérifié dans [Meta for Developers — MARKETNET](https://developers.facebook.com/apps/4510252369235039/).
+
+La publication Facebook a été testée sur la Page **Marketnet Community**. L’image est transférée à Meta depuis le serveur quand elle provient encore de l’ancien stockage privé Supabase; avec Cloudinary, l’URL HTTPS est fournie à l’API Meta. La publication Instagram n’est pas activée pour la Page actuellement sélectionnée, car aucun compte Instagram professionnel n’y est associé.
+
+Les statistiques Facebook utilisent l’API Graph v26 avec `post_total_media_view_unique` (remplacement actuel de l’ancienne métrique dépréciée) et `post_clicks`. Meta peut mettre ses Insights à jour avec délai et ne fournit pas ces statistiques pour toutes les Pages; un « J’aime » est une réaction et ne constitue pas un clic. Les erreurs de permission sont remontées au lieu d’être silencieusement converties en zéro.
+
 ### Créer ou promouvoir un administrateur
 
 Ajoutez ces variables dans le fichier local `.env` (ignoré par Git) :
@@ -257,3 +301,12 @@ Le script utilise la clé `SUPABASE_SERVICE_ROLE_KEY`, qui contourne les protect
 **Attention :** relancer le script change à nouveau le mot de passe pour la valeur actuellement configurée dans `.env`. Après un bootstrap, retirez ou remplacez ce secret local et changez le mot de passe depuis un gestionnaire de secrets avant tout usage partagé. La confirmation immédiate concerne uniquement ce script administrateur; les inscriptions commerçants ordinaires continuent d’exiger la confirmation par email.
 
 Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, définissez temporairement `MARKETNET_RESTORE_MERCHANT_EMAIL` dans l’environnement de PowerShell avant d’exécuter le script. Le compte restauré perd alors ses autres rôles et reçoit uniquement `merchant`.
+
+## Mises à jour récentes (Octobre 2026)
+
+**Refonte de la gestion des commandes (Dashboard) :**
+- **Séparation Liste / Détails :** La vue des commandes (`dashboard.commandes.tsx`) a été épurée pour ne montrer que les informations essentielles. Une nouvelle page détaillée (`dashboard.commandes_.$orderId.tsx`) affiche le récapitulatif complet du client, les articles avec photos, les notes internes, et le statut.
+- **Gestion des Paniers Mixtes :** Prise en charge native des devises multiples. Le `CartSheet` enregistre la devise exacte de chaque ligne de commande. Les vues calculent et affichent dynamiquement la somme (ex: `2 700 $ + 15 000 FCFA`) au lieu du générique "Montant Mixte".
+- **Filtres Avancés :** Implémentation d'un calendrier Popover natif (`react-day-picker` / Shadcn) permettant de filtrer avec précision par date unique ou par plage de dates, avec gestion parfaite des collisions et de l'espace sur mobile.
+- **Responsive Design :** Amélioration de l'UX mobile sur les listes de produits avec l'adoption du mode `flex-col`, tronquant correctement les longs noms sans casser l'interface ni masquer les totaux.
+- **Template WhatsApp Épuré :** Suppression des liens web des produits et des champs redondants (numéro de téléphone) dans le message WhatsApp pour un rendu beaucoup plus professionnel et propre côté client.

@@ -3,10 +3,15 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const GRAPH = "https://graph.facebook.com/v21.0";
-const SCOPES = [
-  "pages_show_list", "pages_read_engagement", "pages_manage_posts", "read_insights",
-  "instagram_basic", "instagram_content_publish", "business_management",
-].join(",");
+const GRAPH_INSIGHTS = "https://graph.facebook.com/v26.0";
+export const META_SCOPES = [
+  "pages_show_list",
+  "pages_read_engagement",
+  "pages_manage_posts",
+  "read_insights",
+] as const;
+
+const SCOPES = META_SCOPES.join(",");
 
 function creds() {
   const id = process.env["META_APP_ID"];
@@ -19,6 +24,33 @@ async function hmac(secret: string, msg: string) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(msg));
   return Array.from(new Uint8Array(sig)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export async function buildMetaState(shopId: string, secret: string) {
+  const nonce = crypto.randomUUID();
+  const ts = Date.now().toString();
+  const payload = `${shopId}.${ts}.${nonce}`;
+  const sig = await hmac(secret, payload);
+  return `${payload}.${sig}`;
+}
+
+export async function verifyMetaState(state: string, expectedShopId: string, secret: string, maxAgeMs = 15 * 60_000) {
+  if (!state || typeof state !== "string") return false;
+
+  const parts = state.split(".");
+  if (parts.length !== 4) return false;
+
+  const [shopId, ts, nonce, sig] = parts;
+  if (!shopId || !ts || !nonce || !sig) return false;
+  if (shopId !== expectedShopId) return false;
+
+  const payload = `${shopId}.${ts}.${nonce}`;
+  if (sig !== (await hmac(secret, payload))) return false;
+
+  const createdAt = Number(ts);
+  if (!Number.isFinite(createdAt)) return false;
+
+  return Date.now() - createdAt <= maxAgeMs;
 }
 
 async function graph<T = Record<string, unknown>>(path: string, init?: RequestInit): Promise<T> {
@@ -67,13 +99,12 @@ export const metaStatus = createServerFn({ method: "POST" })
 
 export const metaAuthUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ redirectUri: uri }).parse(d))
+  .validator((d: unknown) => z.object({ redirectUri: uri }).parse(d))
   .handler(async ({ data, context }) => {
     const { shop, metaAccess } = await myShop(context);
     if (!metaAccess) throw new Error("La publication Meta est disponible à partir du plan Pro");
     const { id, secret } = creds();
-    const payload = `${shop.id}.${Date.now()}`;
-    const state = `${payload}.${await hmac(secret, payload)}`;
+    const state = await buildMetaState(shop.id, secret);
     const u = new URL("https://www.facebook.com/v21.0/dialog/oauth");
     u.searchParams.set("client_id", id);
     u.searchParams.set("redirect_uri", data.redirectUri);
@@ -87,14 +118,16 @@ type Page = { id: string; name: string; access_token: string; instagram_business
 
 export const metaExchange = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ code: z.string().min(5).max(2000), state: z.string().max(300), redirectUri: uri }).parse(d))
+  .validator((d: unknown) => z.object({ code: z.string().min(5).max(2000), state: z.string().max(300), redirectUri: uri }).parse(d))
   .handler(async ({ data, context }) => {
     const { shop } = await myShop(context);
     const { id, secret } = creds();
-    const [shopId, ts, sig] = data.state.split(".");
-    if (shopId !== shop.id || !ts || !sig || sig !== (await hmac(secret, `${shopId}.${ts}`)) || Date.now() - Number(ts) > 15 * 60_000) {
+
+    const validState = await verifyMetaState(data.state, shop.id, secret);
+    if (!validState) {
       throw new Error("Lien de connexion invalide ou expiré, recommencez");
     }
+
     const short = await graph<{ access_token: string }>(`/oauth/access_token?client_id=${id}&client_secret=${secret}&redirect_uri=${encodeURIComponent(data.redirectUri)}&code=${encodeURIComponent(data.code)}`);
     const long = await graph<{ access_token: string; expires_in?: number }>(`/oauth/access_token?grant_type=fb_exchange_token&client_id=${id}&client_secret=${secret}&fb_exchange_token=${short.access_token}`);
     const expires = new Date(Date.now() + (long.expires_in ?? 60 * 86400) * 1000).toISOString();
@@ -120,7 +153,7 @@ export const metaListPages = createServerFn({ method: "POST" })
 
 export const metaSelectPage = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ pageId: z.string().regex(/^\d+$/).max(40) }).parse(d))
+  .validator((d: unknown) => z.object({ pageId: z.string().regex(/^\d+$/).max(40) }).parse(d))
   .handler(async ({ data, context }) => {
     const { shop } = await myShop(context);
     const db = await admin();
@@ -151,7 +184,7 @@ export const metaDisconnect = createServerFn({ method: "POST" })
 
 export const metaPublish = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({
+  .validator((d: unknown) => z.object({
     productId: z.string().uuid(),
     platforms: z.array(z.enum(["facebook", "instagram"])).min(1),
     caption: z.string().max(2000),
@@ -175,12 +208,26 @@ export const metaPublish = createServerFn({ method: "POST" })
       try {
         let externalId: string;
         if (platform === "facebook") {
-          const body = new URLSearchParams({ access_token: c.access_token });
           let r: { id?: string; post_id?: string };
           if (imageUrl) {
-            body.set("url", imageUrl); body.set("caption", caption);
+            const body = new FormData();
+            body.set("access_token", c.access_token);
+            body.set("caption", caption);
+
+            if (img && !img.startsWith("http")) {
+              if (!/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.webp$/i.test(img)) {
+                throw new Error("Chemin d’image produit invalide");
+              }
+              const { data: image, error } = await db.storage.from("shop-media").download(img);
+              if (error || !image) throw new Error("Image du produit introuvable dans le stockage");
+              body.set("source", image, img.split("/").at(-1) ?? "product.webp");
+            } else {
+              body.set("url", imageUrl);
+            }
+
             r = await graph(`/${c.page_id}/photos`, { method: "POST", body });
           } else {
+            const body = new URLSearchParams({ access_token: c.access_token });
             body.set("message", caption); body.set("link", link);
             r = await graph(`/${c.page_id}/feed`, { method: "POST", body });
           }
@@ -208,25 +255,41 @@ export const metaRefreshStats = createServerFn({ method: "POST" })
     const db = await admin();
     const { data: c } = await db.from("meta_connections").select("access_token").eq("shop_id", shop.id).maybeSingle();
     if (!c?.access_token) return { updated: 0 };
-    const { data: posts } = await db.from("meta_posts").select("id, platform, external_id").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(25);
+    const { data: posts } = await db.from("meta_posts").select("id, platform, external_id, reach, clicks").eq("shop_id", shop.id).order("created_at", { ascending: false }).limit(25);
     let updated = 0;
+    const errors: string[] = [];
     for (const p of posts ?? []) {
       if (!p.external_id) continue;
       try {
-        let reach = 0, clicks = 0;
+        let reach: number | null = null, clicks: number | null = null;
+        let hasMetrics = false;
         if (p.platform === "facebook") {
-          const r = await graph<{ data: { name: string; values: { value: number }[] }[] }>(`/${p.external_id}/insights?metric=post_impressions_unique,post_clicks&access_token=${c.access_token}`);
+          const r = await graph<{ data: { name: string; values: { value: number }[] }[] }>(`${GRAPH_INSIGHTS}/${p.external_id}/insights?metric=post_total_media_view_unique,post_clicks&access_token=${encodeURIComponent(c.access_token)}`);
           for (const m of r.data) {
             const v = Number(m.values?.[0]?.value ?? 0);
-            if (m.name === "post_impressions_unique") reach = v; else clicks = v;
+            if (m.name === "post_total_media_view_unique") { reach = v; hasMetrics = true; }
+            if (m.name === "post_clicks") { clicks = v; hasMetrics = true; }
           }
         } else {
-          const r = await graph<{ data: { name: string; values: { value: number }[] }[] }>(`/${p.external_id}/insights?metric=reach&access_token=${c.access_token}`);
-          reach = Number(r.data[0]?.values?.[0]?.value ?? 0);
+          const r = await graph<{ data: { name: string; values: { value: number }[] }[] }>(`${GRAPH_INSIGHTS}/${p.external_id}/insights?metric=reach&access_token=${encodeURIComponent(c.access_token)}`);
+          const metric = r.data.find((item) => item.name === "reach");
+          if (metric) { reach = Number(metric.values?.[0]?.value ?? 0); hasMetrics = true; }
         }
-        await db.from("meta_posts").update({ reach, clicks }).eq("id", p.id);
-        updated++;
-      } catch { /* insights may be unavailable for recent posts */ }
+        const values: { reach?: number | null; clicks?: number | null } = {};
+        if (reach != null) values.reach = reach;
+        else if (p.reach === 0) values.reach = null;
+        if (clicks != null) values.clicks = clicks;
+        else if (p.clicks === 0) values.clicks = null;
+        if (Object.keys(values).length) {
+          await db.from("meta_posts").update(values).eq("id", p.id);
+          if (hasMetrics) updated++;
+        }
+      } catch (e) {
+        errors.push((e as Error).message);
+      }
     }
-    return { updated };
+    if (!updated && !errors.length && (posts ?? []).some((post) => post.external_id)) {
+      errors.push("Meta n’a pas encore fourni ces statistiques. Vérifiez l’accès read_insights et réessayez plus tard.");
+    }
+    return { updated, errors };
   });

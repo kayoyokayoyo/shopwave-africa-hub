@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { Check, ImagePlus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -6,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { THEMES, SHOP_CATEGORIES, PRESET_COLORS, mediaUrl, slugify } from "@/lib/marketnet";
 import { compressAndUpload } from "@/lib/upload";
-import { supabase } from "@/integrations/supabase/client";
+import { cloudinaryUploadSignature } from "@/lib/cloudinary.functions";
 import { cn } from "@/lib/utils";
 
 export type ShopDraft = {
@@ -109,19 +110,19 @@ function Field({ label, hint, children }: { label: string; hint?: string; childr
 
 export function ImageField({ label, value, onChange, square }: { label: string; value: string | null; onChange: (v: string | null) => void; square?: boolean }) {
   const [busy, setBusy] = useState(false);
+  const signUpload = useServerFn(cloudinaryUploadSignature);
   const url = mediaUrl(value);
   async function pick(f?: File) {
     if (!f) return;
     setBusy(true);
     try {
-      const { data } = await supabase.auth.getUser();
-      onChange(await compressAndUpload(f, data.user!.id, square ? 512 : 1600));
+      onChange(await compressAndUpload(f, "storefront", signUpload, square ? 512 : 1600));
     } catch (e) { toast.error((e as Error).message); } finally { setBusy(false); }
   }
   return (
     <div className="space-y-1.5">
       <Label>{label}</Label>
-      <label className={cn("relative grid cursor-pointer place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-card text-muted-foreground", square ? "aspect-square" : "aspect-[16/9] sm:aspect-square")}>
+      <label className={cn("relative grid cursor-pointer place-items-center overflow-hidden rounded-xl border-2 border-dashed bg-card text-muted-foreground", square ? "aspect-square" : "aspect-video sm:aspect-square")}>
         {url ? <img src={url} alt="" className="absolute inset-0 h-full w-full object-cover" /> : busy ? null : <ImagePlus className="h-6 w-6" />}
         {busy && <Loader2 className="relative h-6 w-6 animate-spin" />}
         <input type="file" accept="image/*" className="sr-only" onChange={(e) => pick(e.target.files?.[0])} />

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ImagePlus, Loader2, Plus, Star, Trash2, X } from "lucide-react";
@@ -13,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 import { compressAndUpload } from "@/lib/upload";
+import { cloudinaryUploadSignature } from "@/lib/cloudinary.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard/produits")({
   head: () => ({ meta: [{ title: "Produits — MarketNet" }, { name: "description", content: "Gérez vos produits." }, { property: "og:title", content: "Produits — MarketNet" }, { property: "og:description", content: "Gestion des produits MarketNet." }] }),
@@ -111,6 +113,7 @@ function ProductForm({ initial, shopId, categories, onDone }: { initial: Form; s
   const [f, setF] = useState<Form>(initial);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const signUpload = useServerFn(cloudinaryUploadSignature);
   const set = (p: Partial<Form>) => setF((x) => ({ ...x, ...p }));
   const sel = "flex h-12 w-full rounded-xl border border-input bg-card px-3 text-sm";
 
@@ -120,9 +123,8 @@ function ProductForm({ initial, shopId, categories, onDone }: { initial: Form; s
     if (room <= 0) return toast.error(`${MAX_IMAGES} photos maximum`);
     setUploading(true);
     try {
-      const { data } = await supabase.auth.getUser();
       const paths: string[] = [];
-      for (const file of Array.from(files).slice(0, room)) paths.push(await compressAndUpload(file, data.user!.id));
+      for (const file of Array.from(files).slice(0, room)) paths.push(await compressAndUpload(file, "product", signUpload));
       setF((x) => ({ ...x, images: [...x.images, ...paths] }));
     } catch (e) { toast.error((e as Error).message); } finally { setUploading(false); }
   }

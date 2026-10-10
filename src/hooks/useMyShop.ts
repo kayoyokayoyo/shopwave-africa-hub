@@ -10,6 +10,8 @@ export type Order = Tables<"orders">;
 export function useMyShop() {
   return useQuery({
     queryKey: ["myShop"],
+    staleTime: 0,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return null;

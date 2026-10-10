@@ -24,12 +24,49 @@ function ShopHome() {
   const [sort, setSort] = useState<"" | "asc" | "desc">("");
   const [maxPrice, setMaxPrice] = useState("");
   const [showFilters, setShowFilters] = useState(false);
+  const [animPlaceholder, setAnimPlaceholder] = useState("");
 
   // Autocomplete
   const [focused, setFocused] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Typewriter animation for search placeholder using real product names
+  useEffect(() => {
+    if (products.length === 0) return;
+    const names = products.slice(0, 5).map(p => p.name);
+    let nameIdx = 0;
+    let charIdx = 0;
+    let deleting = false;
+    let timeout: ReturnType<typeof setTimeout>;
+
+    function tick() {
+      const name = names[nameIdx % names.length];
+      if (!deleting) {
+        charIdx++;
+        setAnimPlaceholder("Rechercher " + name.slice(0, charIdx) + "|");
+        if (charIdx >= name.length) {
+          deleting = true;
+          timeout = setTimeout(tick, 2000);
+        } else {
+          timeout = setTimeout(tick, 100);
+        }
+      } else {
+        charIdx--;
+        setAnimPlaceholder(charIdx > 0 ? "Rechercher " + name.slice(0, charIdx) + "|" : "");
+        if (charIdx <= 0) {
+          deleting = false;
+          nameIdx++;
+          timeout = setTimeout(tick, 800);
+        } else {
+          timeout = setTimeout(tick, 50);
+        }
+      }
+    }
+    timeout = setTimeout(tick, 1500);
+    return () => clearTimeout(timeout);
+  }, [products.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const suggestions = useMemo(() => {
     if (!q.trim() || q.length < 2) return [];
@@ -134,7 +171,7 @@ function ShopHome() {
                   onChange={(e) => { setQ(e.target.value); setActiveIdx(-1); }}
                   onFocus={() => setFocused(true)}
                   onKeyDown={handleKeyDown}
-                  placeholder="Rechercher un produit..."
+                  placeholder={(!focused && !q && animPlaceholder) ? animPlaceholder : "Rechercher un produit..."}
                   autoComplete="off"
                   className="h-11 w-full rounded-xl border border-current/10 bg-shop-card pl-10 pr-9 text-sm shadow-sm transition-all duration-200 placeholder:text-shop-muted focus:border-shop/40 focus:bg-background focus:outline-none focus:ring-2 focus:ring-shop/10"
                 />

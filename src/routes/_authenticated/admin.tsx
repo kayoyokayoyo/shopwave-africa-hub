@@ -46,21 +46,28 @@ function SidebarContent({ onClose, collapsed = false, onToggle }: { onClose?: ()
               to={n.to} 
               onClick={onClose}
               activeOptions={{ exact: true }} 
-              className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted", collapsed ? "justify-center" : "gap-3")} 
-              activeProps={{ className: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground" }}
+              className={cn(
+                "group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground", 
+                collapsed ? "justify-center" : "gap-3"
+              )} 
+              activeProps={{ className: "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary font-bold" }}
               title={collapsed ? n.label : undefined}
             >
-              <Icon className="h-5 w-5 shrink-0" />
+              <Icon className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
               {!collapsed && <span>{n.label}</span>}
             </Link>
           );
         })}
       </nav>
       <div className="p-4 border-t">
-        <Link to="/dashboard" title={collapsed ? "Quitter l'admin" : undefined} className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted", collapsed ? "justify-center" : "gap-3")}>
-          <ArrowLeft className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Quitter l'admin</span>}
-        </Link>
+        <button
+          onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
+          title={collapsed ? "Déconnexion" : undefined}
+          className={cn("group flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500", collapsed ? "justify-center" : "gap-3")}
+        >
+          <ArrowLeft className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
+          {!collapsed && <span>Déconnexion</span>}
+        </button>
       </div>
     </div>
   );

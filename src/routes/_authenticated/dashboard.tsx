@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Home, Package, Palette, ShoppingBag, Share2, LogOut, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -24,6 +25,16 @@ function DashboardLayout() {
   const { data: isAdmin, isLoading: isAdminLoading } = useIsAdmin();
   const navigate = useNavigate();
 
+  const { data: newOrdersCount } = useQuery({
+    queryKey: ["newOrdersCount", shop?.id],
+    enabled: !!shop?.id,
+    queryFn: async () => {
+      const { count } = await supabase.from("orders").select("*", { count: "exact", head: true }).eq("shop_id", shop!.id).eq("status", "new");
+      return count || 0;
+    },
+    refetchInterval: 30000
+  });
+
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("merchant-sidebar-collapsed") === "true";
@@ -46,35 +57,48 @@ function DashboardLayout() {
     <div className="min-h-screen bg-background lg:flex">
       <aside className={cn("hidden shrink-0 border-r bg-sidebar lg:block transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
         <div className={cn("fixed inset-y-0 flex flex-col p-5 transition-all duration-300", collapsed ? "w-[80px]" : "w-[260px]")}>
-          <div className={cn("flex items-center h-8", collapsed ? "justify-center" : "justify-between")}>
-            {!collapsed && <Logo />}
-            {collapsed && <div className="grid h-8 w-8 place-items-center rounded bg-primary text-primary-foreground font-bold">M</div>}
-            <button onClick={() => setCollapsed(!collapsed)} className={cn("grid h-8 w-8 place-items-center rounded-md hover:bg-sidebar-accent text-muted-foreground", collapsed && "hidden sm:grid")}>
+          <div className={cn("flex items-center h-14", collapsed ? "justify-center" : "justify-between")}>
+            {!collapsed && (
+              <div className="flex items-center gap-3 min-w-0">
+                {shop.logo_url
+                  ? <img src={shop.logo_url} alt={shop.name} className="h-8 w-8 rounded-lg object-cover shrink-0" />
+                  : <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">{shop.name.charAt(0).toUpperCase()}</div>
+                }
+                <span className="font-bold text-sm truncate">{shop.name}</span>
+              </div>
+            )}
+            {collapsed && <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center text-primary-foreground font-bold">{shop.name.charAt(0).toUpperCase()}</div>}
+            <button onClick={() => setCollapsed(!collapsed)} className={cn("grid h-8 w-8 shrink-0 place-items-center rounded-md hover:bg-sidebar-accent text-muted-foreground", collapsed && "hidden sm:grid")}>
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </button>
           </div>
           
           <nav className="mt-8 flex-1 space-y-1 overflow-y-auto">
-            {NAV.map((n) => (
+            {NAV.map((n) => {
+              const count = n.label === "Commandes" ? (newOrdersCount || 0) : 0;
+              return (
               <Link 
                 key={n.to} 
                 to={n.to} 
                 activeOptions={{ exact: "exact" in n }} 
-                className={cn("flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent", collapsed ? "justify-center" : "gap-3")}
-                activeProps={{ className: "bg-sidebar-accent text-sidebar-foreground font-semibold" }}
+                className={cn("group flex items-center rounded-xl px-3 py-2.5 text-sm font-medium text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground", collapsed ? "justify-center" : "gap-3")}
+                activeProps={{ className: "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary font-bold" }}
                 title={collapsed ? n.label : undefined}
               >
-                <n.icon className="h-5 w-5 shrink-0" />
+                <div className="relative">
+                  <n.icon className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
+                  {count > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-background">{count > 99 ? '99+' : count}</span>}
+                </div>
                 {!collapsed && <span>{n.label}</span>}
               </Link>
-            ))}
+            )})}
           </nav>
           <button 
-            onClick={() => supabase.auth.signOut()} 
-            className={cn("flex shrink-0 items-center rounded-xl px-3 py-2.5 text-sm text-muted-foreground hover:bg-sidebar-accent", collapsed ? "justify-center" : "gap-3")}
+            onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')} 
+            className={cn("group flex shrink-0 items-center rounded-xl px-3 py-2.5 text-sm text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500", collapsed ? "justify-center" : "gap-3")}
             title={collapsed ? "Déconnexion" : undefined}
           >
-            <LogOut className="h-5 w-5 shrink-0" />
+            <LogOut className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
             {!collapsed && <span>Déconnexion</span>}
           </button>
         </div>
@@ -85,9 +109,9 @@ function DashboardLayout() {
           <div className="lg:hidden"><Logo /></div>
           <p className="hidden truncate font-semibold lg:block">{shop.name}</p>
           <div className="flex items-center gap-2">
-            <Link to="/b/$slug" params={{ slug: shop.slug }} target="_blank" className="flex h-10 items-center gap-1.5 rounded-xl bg-secondary px-3 text-sm font-semibold">
+            <a href={`/b/${encodeURIComponent(shop.slug)}`} aria-label="Voir ma boutique" title="Voir ma boutique" className="flex h-10 items-center gap-1.5 rounded-xl bg-secondary px-3 text-sm font-semibold">
               <ExternalLink className="h-4 w-4" /><span className="hidden sm:inline">Voir ma boutique</span>
-            </Link>
+            </a>
             <button onClick={() => supabase.auth.signOut()} aria-label="Déconnexion" className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground lg:hidden"><LogOut className="h-4 w-4" /></button>
           </div>
         </header>
@@ -95,12 +119,18 @@ function DashboardLayout() {
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
-        {NAV.map((n) => (
+        {NAV.map((n) => {
+          const count = n.label === "Commandes" ? (newOrdersCount || 0) : 0;
+          return (
           <Link key={n.to} to={n.to} activeOptions={{ exact: "exact" in n }} className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground"
             activeProps={{ className: "text-primary" }}>
-            <n.icon className="h-5 w-5" />{n.label}
+            <div className="relative">
+              <n.icon className="h-5 w-5" />
+              {count > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white shadow-sm ring-1 ring-background">{count > 99 ? '99+' : count}</span>}
+            </div>
+            {n.label}
           </Link>
-        ))}
+        )})}
       </nav>
     </div>
   );

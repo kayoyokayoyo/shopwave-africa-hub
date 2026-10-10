@@ -15,8 +15,13 @@ export const SHOP_CATEGORIES = [
 export const PRESET_COLORS = ["#E8590C", "#C2255C", "#2F9E44", "#1971C2", "#F59F00", "#111111", "#7048E8", "#0CA678"];
 
 export function formatPrice(n: number, currency: string) {
+  if (currency === "MIXTE") return "Montant mixte";
   if (currency === "CDF") return `${Math.round(n).toLocaleString("fr-FR")} FC`;
-  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })} $`;
+  if (currency === "FCFA" || currency === "XOF" || currency === "XAF") return `${Math.round(n).toLocaleString("fr-FR")} FCFA`;
+  if (currency === "EUR") return `${n.toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })} €`;
+  if (currency === "USD") return `${n.toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })} $`;
+  
+  return `${n.toLocaleString("fr-FR", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })} ${currency}`;
 }
 
 export function slugify(s: string) {

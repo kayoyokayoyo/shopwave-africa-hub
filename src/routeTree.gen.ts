@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
@@ -29,6 +30,8 @@ import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_a
 import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authenticated/dashboard.meta'
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
+import { Route as AuthenticatedAdminBoutiquesShopIdRouteImport } from './routes/_authenticated/admin.boutiques_.$shopId'
+import { Route as AuthenticatedDashboardCommandesOrderIdRouteImport } from './routes/_authenticated/dashboard.commandes_.$orderId'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as BSlugPProductIdRouteImport } from './routes/b.$slug.p.$productId'
 
@@ -49,6 +52,11 @@ const AuthRoute = AuthRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
@@ -140,6 +148,18 @@ const BSlugIndexRoute = BSlugIndexRouteImport.update({
   path: '/',
   getParentRoute: () => BSlugRoute,
 } as any)
+const AuthenticatedAdminBoutiquesShopIdRoute =
+  AuthenticatedAdminBoutiquesShopIdRouteImport.update({
+    id: '/boutiques_/$shopId',
+    path: '/boutiques/$shopId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedDashboardCommandesOrderIdRoute =
+  AuthenticatedDashboardCommandesOrderIdRouteImport.update({
+    id: '/commandes_/$orderId',
+    path: '/commandes/$orderId',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
   id: '/api/public/media/$',
   path: '/api/public/media/$',
@@ -155,6 +175,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -171,6 +192,8 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
+  '/admin/boutiques/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
@@ -178,6 +201,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
   '/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
   '/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
@@ -191,6 +215,8 @@ export interface FileRoutesByTo {
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug': typeof BSlugIndexRoute
+  '/admin/boutiques/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
@@ -200,6 +226,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/terms': typeof TermsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -216,6 +243,8 @@ export interface FileRoutesById {
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
+  '/_authenticated/admin/boutiques_/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/_authenticated/dashboard/commandes_/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
 }
@@ -225,6 +254,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/terms'
     | '/admin'
     | '/dashboard'
     | '/onboarding'
@@ -241,6 +271,8 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/dashboard/'
     | '/b/$slug/'
+    | '/admin/boutiques/$shopId'
+    | '/dashboard/commandes/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
   fileRoutesByTo: FileRoutesByTo
@@ -248,6 +280,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/terms'
     | '/onboarding'
     | '/admin/boutiques'
     | '/admin/commercants'
@@ -261,6 +294,8 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/b/$slug'
+    | '/admin/boutiques/$shopId'
+    | '/dashboard/commandes/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
   id:
@@ -269,6 +304,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/terms'
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
@@ -285,6 +321,8 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
     | '/b/$slug/'
+    | '/_authenticated/admin/boutiques_/$shopId'
+    | '/_authenticated/dashboard/commandes_/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
   fileRoutesById: FileRoutesById
@@ -294,6 +332,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  TermsRoute: typeof TermsRoute
   BSlugRoute: typeof BSlugRouteWithChildren
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
 }
@@ -326,6 +365,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
@@ -440,6 +486,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BSlugIndexRouteImport
       parentRoute: typeof BSlugRoute
     }
+    '/_authenticated/admin/boutiques_/$shopId': {
+      id: '/_authenticated/admin/boutiques_/$shopId'
+      path: '/boutiques/$shopId'
+      fullPath: '/admin/boutiques/$shopId'
+      preLoaderRoute: typeof AuthenticatedAdminBoutiquesShopIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    '/_authenticated/dashboard/commandes_/$orderId': {
+      id: '/_authenticated/dashboard/commandes_/$orderId'
+      path: '/commandes/$orderId'
+      fullPath: '/dashboard/commandes/$orderId'
+      preLoaderRoute: typeof AuthenticatedDashboardCommandesOrderIdRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/api/public/media/$': {
       id: '/api/public/media/$'
       path: '/api/public/media/$'
@@ -464,6 +524,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminParametresRoute: typeof AuthenticatedAdminParametresRoute
   AuthenticatedAdminPlansRoute: typeof AuthenticatedAdminPlansRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminBoutiquesShopIdRoute: typeof AuthenticatedAdminBoutiquesShopIdRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -473,6 +534,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminParametresRoute: AuthenticatedAdminParametresRoute,
   AuthenticatedAdminPlansRoute: AuthenticatedAdminPlansRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminBoutiquesShopIdRoute:
+    AuthenticatedAdminBoutiquesShopIdRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
@@ -484,6 +547,7 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardMetaRoute: typeof AuthenticatedDashboardMetaRoute
   AuthenticatedDashboardProduitsRoute: typeof AuthenticatedDashboardProduitsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
+  AuthenticatedDashboardCommandesOrderIdRoute: typeof AuthenticatedDashboardCommandesOrderIdRoute
 }
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
@@ -493,6 +557,8 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardMetaRoute: AuthenticatedDashboardMetaRoute,
     AuthenticatedDashboardProduitsRoute: AuthenticatedDashboardProduitsRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
+    AuthenticatedDashboardCommandesOrderIdRoute:
+      AuthenticatedDashboardCommandesOrderIdRoute,
   }
 
 const AuthenticatedDashboardRouteWithChildren =
@@ -532,6 +598,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  TermsRoute: TermsRoute,
   BSlugRoute: BSlugRouteWithChildren,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
 }
