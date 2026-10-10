@@ -1,6 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { Home, Package, Palette, ShoppingBag, LogOut, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
+import { Home, Package, Palette, ShoppingBag, Share2, LogOut, ExternalLink, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -16,6 +16,7 @@ const NAV = [
   { to: "/dashboard/produits", label: "Produits", icon: Package },
   { to: "/dashboard/commandes", label: "Commandes", icon: ShoppingBag },
   { to: "/dashboard/boutique", label: "Boutique", icon: Palette },
+  { to: "/dashboard/meta", label: "Réseaux", icon: Share2 },
 ] as const;
 
 function DashboardLayout() {
@@ -93,7 +94,7 @@ function DashboardLayout() {
         <main className="mx-auto max-w-7xl w-full px-4 py-6 lg:px-8"><Outlet /></main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-5 border-t bg-card pb-[env(safe-area-inset-bottom)] lg:hidden">
         {NAV.map((n) => (
           <Link key={n.to} to={n.to} activeOptions={{ exact: "exact" in n }} className="flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium text-muted-foreground"
             activeProps={{ className: "text-primary" }}>

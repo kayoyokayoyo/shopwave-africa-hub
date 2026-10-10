@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Meta (Facebook/Instagram) tokens live only in meta_connections and are read/written exclusively by server functions with the admin client after verifying shop ownership; why: tokens must never reach the browser.

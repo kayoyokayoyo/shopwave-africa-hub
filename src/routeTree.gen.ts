@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authentic
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
 import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
+import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authenticated/dashboard.meta'
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
@@ -122,6 +123,12 @@ const AuthenticatedDashboardCommandesRoute =
     path: '/commandes',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardMetaRoute =
+  AuthenticatedDashboardMetaRouteImport.update({
+    id: '/meta',
+    path: '/meta',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const AuthenticatedDashboardProduitsRoute =
   AuthenticatedDashboardProduitsRouteImport.update({
     id: '/produits',
@@ -159,6 +166,7 @@ export interface FileRoutesByFullPath {
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -178,6 +186,7 @@ export interface FileRoutesByTo {
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -202,6 +211,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/plans': typeof AuthenticatedAdminPlansRoute
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
+  '/_authenticated/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/admin/plans'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
+    | '/dashboard/meta'
     | '/dashboard/produits'
     | '/admin/'
     | '/dashboard/'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/admin/plans'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
+    | '/dashboard/meta'
     | '/dashboard/produits'
     | '/admin'
     | '/dashboard'
@@ -268,6 +280,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/plans'
     | '/_authenticated/dashboard/boutique'
     | '/_authenticated/dashboard/commandes'
+    | '/_authenticated/dashboard/meta'
     | '/_authenticated/dashboard/produits'
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
@@ -406,6 +419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardCommandesRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/meta': {
+      id: '/_authenticated/dashboard/meta'
+      path: '/meta'
+      fullPath: '/dashboard/meta'
+      preLoaderRoute: typeof AuthenticatedDashboardMetaRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/_authenticated/dashboard/produits': {
       id: '/_authenticated/dashboard/produits'
       path: '/produits'
@@ -461,6 +481,7 @@ const AuthenticatedAdminRouteWithChildren =
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardBoutiqueRoute: typeof AuthenticatedDashboardBoutiqueRoute
   AuthenticatedDashboardCommandesRoute: typeof AuthenticatedDashboardCommandesRoute
+  AuthenticatedDashboardMetaRoute: typeof AuthenticatedDashboardMetaRoute
   AuthenticatedDashboardProduitsRoute: typeof AuthenticatedDashboardProduitsRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
 }
@@ -469,6 +490,7 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
   {
     AuthenticatedDashboardBoutiqueRoute: AuthenticatedDashboardBoutiqueRoute,
     AuthenticatedDashboardCommandesRoute: AuthenticatedDashboardCommandesRoute,
+    AuthenticatedDashboardMetaRoute: AuthenticatedDashboardMetaRoute,
     AuthenticatedDashboardProduitsRoute: AuthenticatedDashboardProduitsRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
   }
