@@ -24,7 +24,7 @@ const STATUS_CONFIG: Record<Order["status"], { label: string; icon: any; color: 
   cancelled: { label: "Annulée",   icon: XCircle,      color: "text-red-500",     bg: "bg-red-500/10",     ring: "ring-red-500/20"     },
 };
 
-type Item = { name: string; qty: number; price: number; variant?: string };
+type Item = { name: string; qty: number; price: number; variant?: string; currency?: string; productId?: string };
 
 const DATE_FILTERS = [
   { label: "Toutes les dates", value: "all" },

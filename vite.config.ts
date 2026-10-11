@@ -7,7 +7,8 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 import { loadEnv } from "vite";
 
-export default defineConfig(({ mode }) => {
+const mode = process.env.NODE_ENV === "production" ? "production" : "development";
+{
   // Vite reads .env for import.meta.env, but does not expose unprefixed values
   // through process.env. Load only server credentials here; never define them
   // for the client bundle.
@@ -20,11 +21,11 @@ export default defineConfig(({ mode }) => {
     if (!process.env[key] && env[key]) process.env[key] = env[key];
   }
 
-  return {
-    tanstackStart: {
-      // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-      // nitro/vite builds from this
-      server: { entry: "server" },
-    },
-  };
+}
+
+export default defineConfig({
+  tanstackStart: {
+    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
+    server: { entry: "server" },
+  },
 });

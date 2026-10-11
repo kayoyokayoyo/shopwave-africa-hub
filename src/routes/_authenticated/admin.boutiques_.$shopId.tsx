@@ -75,7 +75,7 @@ function ShopDetail() {
 
   async function removeMerchant() {
     try {
-      await deleteMerchantFn({ data: { userId: shop.owner_id } });
+      await deleteMerchantFn({ data: { userId: shop!.owner_id } });
       toast.success("Compte et boutique supprimes definitivement");
       navigate({ to: "/admin/boutiques" });
     } catch (cause) {
