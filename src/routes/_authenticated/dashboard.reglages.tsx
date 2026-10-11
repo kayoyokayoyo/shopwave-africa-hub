@@ -138,7 +138,7 @@ function SettingsPage() {
         </div>
         <Button
           variant="outline"
-          onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/"))}
+          onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/auth"))}
           className="text-red-500 hover:text-red-600 hover:bg-red-500/10 rounded-xl"
         >
           <LogOut className="h-4 w-4 mr-2" /> Déconnexion

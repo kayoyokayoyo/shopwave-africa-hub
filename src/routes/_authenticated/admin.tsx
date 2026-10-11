@@ -61,7 +61,7 @@ function SidebarContent({ onClose, collapsed = false, onToggle }: { onClose?: ()
       </nav>
       <div className="p-4 border-t">
         <button
-          onClick={() => supabase.auth.signOut().then(() => window.location.href = '/')}
+          onClick={() => supabase.auth.signOut().then(() => window.location.href = '/auth')}
           title={collapsed ? "Déconnexion" : undefined}
           className={cn("group flex w-full items-center rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500", collapsed ? "justify-center" : "gap-3")}
         >

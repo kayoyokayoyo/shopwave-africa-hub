@@ -211,7 +211,7 @@ function DashboardLayout() {
             </Link>
 
             <button
-              onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/"))}
+              onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/auth"))}
               className={cn(
                 "group flex shrink-0 items-center rounded-2xl text-sm text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500",
                 collapsed ? "h-12 w-12 mx-auto justify-center" : "w-full gap-3 px-3 py-2.5"
@@ -243,7 +243,7 @@ function DashboardLayout() {
               <span className="hidden sm:inline">Voir ma boutique</span>
             </a>
             <button
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/auth"))}
               aria-label="Déconnexion"
               className="grid h-10 w-10 place-items-center rounded-xl text-muted-foreground lg:hidden"
             >
