@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -53,6 +53,7 @@ function MetaPage() {
   const refreshFn = useServerFn(metaRefreshStats);
   const [busy, setBusy] = useState(false);
   const exchanged = useRef(false);
+  const autoRefreshed = useRef(false);
 
   const status = useQuery({ queryKey: ["metaStatus"], queryFn: () => statusFn() });
   const conn = status.data?.connection;
@@ -119,6 +120,17 @@ function MetaPage() {
     }
   }
 
+  // ⚠️ HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURN (Rules of Hooks)
+  // Auto-refresh stats if posts exist but stats are null (first load after publish)
+  useEffect(() => {
+    const s = status.data;
+    if (!s || autoRefreshed.current) return;
+    if (s.posts.length > 0 && s.posts.some(p => p.reach === null) && !busy) {
+      autoRefreshed.current = true;
+      refreshStats();
+    }
+  }, [status.data, busy]); // eslint-disable-line react-hooks/exhaustive-deps
+
   if (status.isLoading || !shop) return (
     <div className="grid place-items-center py-32 text-muted-foreground">
       <Loader2 className="h-8 w-8 animate-spin" />
@@ -136,13 +148,6 @@ function MetaPage() {
   const productsToPublish = (products ?? []).filter(
     (product) => product.status !== "hidden" && !publishedProductIds.has(product.id),
   );
-
-  // Auto-refresh stats if posts exist but stats are null (first load after publish)
-  useEffect(() => {
-    if (s.posts.length > 0 && s.posts.some(p => p.reach === null) && !busy) {
-      refreshStats();
-    }
-  }, [s.posts.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="mx-auto max-w-4xl space-y-8">
