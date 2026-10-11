@@ -192,36 +192,42 @@ export type Database = {
           advanced_stats: boolean
           advanced_themes: boolean
           id: string
+          max_active_promotions: number | null
           max_photos: number
           max_products: number | null
           meta_access: boolean
           name: string
           position: number
           price_usd: number
+          promo_templates: string[]
         }
         Insert: {
           active?: boolean
           advanced_stats?: boolean
           advanced_themes?: boolean
           id: string
+          max_active_promotions?: number | null
           max_photos?: number
           max_products?: number | null
           meta_access?: boolean
           name: string
           position?: number
           price_usd?: number
+          promo_templates?: string[]
         }
         Update: {
           active?: boolean
           advanced_stats?: boolean
           advanced_themes?: boolean
           id?: string
+          max_active_promotions?: number | null
           max_photos?: number
           max_products?: number | null
           meta_access?: boolean
           name?: string
           position?: number
           price_usd?: number
+          promo_templates?: string[]
         }
         Relationships: []
       }
@@ -346,6 +352,139 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      promotion_events: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          promotion_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          promotion_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          promotion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_events_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotion_products: {
+        Row: {
+          discount_type: string | null
+          discount_value: number | null
+          position: number
+          product_id: string
+          promotion_id: string
+        }
+        Insert: {
+          discount_type?: string | null
+          discount_value?: number | null
+          position?: number
+          product_id: string
+          promotion_id: string
+        }
+        Update: {
+          discount_type?: string | null
+          discount_value?: number | null
+          position?: number
+          product_id?: string
+          promotion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotion_products_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promotions: {
+        Row: {
+          button_label: string
+          created_at: string
+          description: string | null
+          discount_type: string | null
+          discount_value: number | null
+          ends_at: string | null
+          id: string
+          image_url: string | null
+          is_hidden: boolean
+          position: number
+          shop_id: string
+          starts_at: string | null
+          status: string
+          template: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          button_label?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_hidden?: boolean
+          position?: number
+          shop_id: string
+          starts_at?: string | null
+          status?: string
+          template?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          button_label?: string
+          created_at?: string
+          description?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          ends_at?: string | null
+          id?: string
+          image_url?: string | null
+          is_hidden?: boolean
+          position?: number
+          shop_id?: string
+          starts_at?: string | null
+          status?: string
+          template?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shop_reports: {
         Row: {
@@ -566,6 +705,8 @@ export type Database = {
       }
       increment_shop_view: { Args: { _slug: string }; Returns: undefined }
       is_active_user: { Args: { _uid: string }; Returns: boolean }
+      is_promotion_owner: { Args: { _promo_id: string }; Returns: boolean }
+      is_promotion_public: { Args: { _promo_id: string }; Returns: boolean }
       is_shop_owner: { Args: { _shop_id: string }; Returns: boolean }
       is_shop_public: { Args: { _shop_id: string }; Returns: boolean }
     }
