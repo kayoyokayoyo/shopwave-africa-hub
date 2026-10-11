@@ -38,7 +38,7 @@ function OrderDetailPage() {
   });
 
   async function update(patch: Partial<Pick<Order, "status" | "notes">>) {
-    const promise = supabase.from("orders").update(patch).eq("id", orderId);
+    const promise = Promise.resolve(supabase.from("orders").update(patch).eq("id", orderId)).then(({ error }) => { if (error) throw error; });
     toast.promise(promise, {
       loading: "Mise à jour...",
       success: () => {

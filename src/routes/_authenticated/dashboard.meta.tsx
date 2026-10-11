@@ -107,10 +107,10 @@ function MetaPage() {
     try {
       const result = await refreshFn();
       await qc.invalidateQueries({ queryKey: ["metaStatus"] });
-      if (result.errors.length > 0) {
-        toast.error(`Statistiques incomplÃ¨tes : ${result.errors[0]}`);
+      if (result.errors && result.errors.length > 0) {
+        toast.error(`Statistiques incomplètes : ${result.errors![0]}`);
       } else {
-        toast.success(`Statistiques actualisÃ©es (${result.updated} publication(s))`);
+        toast.success(`Statistiques actualisées (${result.updated} publication(s))`);
       }
     } catch (e) {
       toast.error((e as Error).message);
@@ -359,7 +359,7 @@ function MetaPage() {
                 <div className="rounded-3xl border border-dashed bg-muted/30 p-10 text-center">
                   <p className="text-sm text-muted-foreground">
                     {(products ?? []).some((product) => product.status !== "hidden")
-                      ? "Tous vos produits disponibles ont dÃ©jÃ  Ã©tÃ© publiÃ©s. Consultez les rÃ©sultats des publications ci-dessous."
+                      ? "Tous vos produits disponibles ont déjÃ  été publiés. Consultez les résultats des publications ci-dessous."
                       : "Aucun produit Ã  publier. Ajoutez d'abord des produits depuis l'onglet Produits."}
                   </p>
                 </div>
