@@ -108,7 +108,7 @@ function AuthPage() {
 
           <FadeIn delay={100}>
             <h1 className="text-3xl font-extrabold tracking-tight">
-              {mode === "signup" ? "Créer ma boutique" : mode === "forgot" ? "Mot de passe oublié ?" : "Bon retour !"}
+              {mode === "signup" ? "Créer mon compte" : mode === "forgot" ? "Mot de passe oublié ?" : "Bon retour !"}
             </h1>
             <p className="mt-2 text-muted-foreground">
               {mode === "signup" ? "Gratuit, sans carte bancaire. Prêt en 5 minutes." : mode === "forgot" ? "Entrez votre email pour recevoir un lien de réinitialisation." : "Connectez-vous pour gérer votre boutique et vos commandes."}
@@ -131,7 +131,7 @@ function AuthPage() {
                     <Label htmlFor="name">Prénom & Nom</Label>
                     <div className="relative">
                       <User className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                      <Input id="name" className="h-12 pl-11 rounded-xl bg-muted/50 focus:bg-background transition-colors" placeholder="Jean Dupont" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+                      <Input id="name" className="h-12 pl-11 rounded-xl bg-muted/50 focus:bg-background transition-colors" placeholder="Kouamé Diallo" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
                     </div>
                   </div>
                 )}
@@ -140,7 +140,7 @@ function AuthPage() {
                   <Label htmlFor="email">Adresse email</Label>
                   <div className="relative">
                     <Mail className="absolute left-3.5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-                    <Input id="email" type="email" className="h-12 pl-11 rounded-xl bg-muted/50 focus:bg-background transition-colors" placeholder="jean@exemple.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
+                    <Input id="email" type="email" className="h-12 pl-11 rounded-xl bg-muted/50 focus:bg-background transition-colors" placeholder="kouame@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required />
                   </div>
                 </div>
 
@@ -170,7 +170,7 @@ function AuthPage() {
 
           <FadeIn delay={300} className="mt-8 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
-              <>Pas encore de compte ? <button onClick={() => setMode("signup")} className="font-bold text-primary hover:underline">Créer ma boutique</button></>
+              <>Pas encore de compte ? <button onClick={() => setMode("signup")} className="font-bold text-primary hover:underline">Créer mon compte</button></>
             ) : mode === "signup" ? (
               <>Déjà inscrit ? <button onClick={() => setMode("login")} className="font-bold text-primary hover:underline">Se connecter</button></>
             ) : null}
