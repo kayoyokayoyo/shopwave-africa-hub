@@ -29,11 +29,14 @@ import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_au
 import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
 import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authenticated/dashboard.meta'
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
+import { Route as AuthenticatedDashboardPromotionsRouteImport } from './routes/_authenticated/dashboard.promotions'
+import { Route as AuthenticatedDashboardReglagesRouteImport } from './routes/_authenticated/dashboard.reglages'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as AuthenticatedAdminBoutiquesShopIdRouteImport } from './routes/_authenticated/admin.boutiques_.$shopId'
 import { Route as AuthenticatedDashboardCommandesOrderIdRouteImport } from './routes/_authenticated/dashboard.commandes_.$orderId'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as BSlugPProductIdRouteImport } from './routes/b.$slug.p.$productId'
+import { Route as BSlugPromoPromoIdRouteImport } from './routes/b.$slug.promo.$promoId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -143,6 +146,18 @@ const AuthenticatedDashboardProduitsRoute =
     path: '/produits',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardPromotionsRoute =
+  AuthenticatedDashboardPromotionsRouteImport.update({
+    id: '/promotions',
+    path: '/promotions',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
+const AuthenticatedDashboardReglagesRoute =
+  AuthenticatedDashboardReglagesRouteImport.update({
+    id: '/reglages',
+    path: '/reglages',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const BSlugIndexRoute = BSlugIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -170,6 +185,11 @@ const BSlugPProductIdRoute = BSlugPProductIdRouteImport.update({
   path: '/p/$productId',
   getParentRoute: () => BSlugRoute,
 } as any)
+const BSlugPromoPromoIdRoute = BSlugPromoPromoIdRouteImport.update({
+  id: '/promo/$promoId',
+  path: '/promo/$promoId',
+  getParentRoute: () => BSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -189,6 +209,8 @@ export interface FileRoutesByFullPath {
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
+  '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
@@ -196,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
+  '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -212,6 +235,8 @@ export interface FileRoutesByTo {
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
+  '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug': typeof BSlugIndexRoute
@@ -219,6 +244,7 @@ export interface FileRoutesByTo {
   '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
+  '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -240,6 +266,8 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/_authenticated/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
+  '/_authenticated/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
+  '/_authenticated/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
@@ -247,6 +275,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/commandes_/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
+  '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -268,6 +297,8 @@ export interface FileRouteTypes {
     | '/dashboard/commandes'
     | '/dashboard/meta'
     | '/dashboard/produits'
+    | '/dashboard/promotions'
+    | '/dashboard/reglages'
     | '/admin/'
     | '/dashboard/'
     | '/b/$slug/'
@@ -275,6 +306,7 @@ export interface FileRouteTypes {
     | '/dashboard/commandes/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
+    | '/b/$slug/promo/$promoId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -291,6 +323,8 @@ export interface FileRouteTypes {
     | '/dashboard/commandes'
     | '/dashboard/meta'
     | '/dashboard/produits'
+    | '/dashboard/promotions'
+    | '/dashboard/reglages'
     | '/admin'
     | '/dashboard'
     | '/b/$slug'
@@ -298,6 +332,7 @@ export interface FileRouteTypes {
     | '/dashboard/commandes/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
+    | '/b/$slug/promo/$promoId'
   id:
     | '__root__'
     | '/'
@@ -318,6 +353,8 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/commandes'
     | '/_authenticated/dashboard/meta'
     | '/_authenticated/dashboard/produits'
+    | '/_authenticated/dashboard/promotions'
+    | '/_authenticated/dashboard/reglages'
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
     | '/b/$slug/'
@@ -325,6 +362,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/commandes_/$orderId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
+    | '/b/$slug/promo/$promoId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -479,6 +517,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardProduitsRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/promotions': {
+      id: '/_authenticated/dashboard/promotions'
+      path: '/promotions'
+      fullPath: '/dashboard/promotions'
+      preLoaderRoute: typeof AuthenticatedDashboardPromotionsRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
+    '/_authenticated/dashboard/reglages': {
+      id: '/_authenticated/dashboard/reglages'
+      path: '/reglages'
+      fullPath: '/dashboard/reglages'
+      preLoaderRoute: typeof AuthenticatedDashboardReglagesRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/b/$slug/': {
       id: '/b/$slug/'
       path: '/'
@@ -514,6 +566,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BSlugPProductIdRouteImport
       parentRoute: typeof BSlugRoute
     }
+    '/b/$slug/promo/$promoId': {
+      id: '/b/$slug/promo/$promoId'
+      path: '/promo/$promoId'
+      fullPath: '/b/$slug/promo/$promoId'
+      preLoaderRoute: typeof BSlugPromoPromoIdRouteImport
+      parentRoute: typeof BSlugRoute
+    }
   }
 }
 
@@ -546,6 +605,8 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardCommandesRoute: typeof AuthenticatedDashboardCommandesRoute
   AuthenticatedDashboardMetaRoute: typeof AuthenticatedDashboardMetaRoute
   AuthenticatedDashboardProduitsRoute: typeof AuthenticatedDashboardProduitsRoute
+  AuthenticatedDashboardPromotionsRoute: typeof AuthenticatedDashboardPromotionsRoute
+  AuthenticatedDashboardReglagesRoute: typeof AuthenticatedDashboardReglagesRoute
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardCommandesOrderIdRoute: typeof AuthenticatedDashboardCommandesOrderIdRoute
 }
@@ -556,6 +617,9 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardCommandesRoute: AuthenticatedDashboardCommandesRoute,
     AuthenticatedDashboardMetaRoute: AuthenticatedDashboardMetaRoute,
     AuthenticatedDashboardProduitsRoute: AuthenticatedDashboardProduitsRoute,
+    AuthenticatedDashboardPromotionsRoute:
+      AuthenticatedDashboardPromotionsRoute,
+    AuthenticatedDashboardReglagesRoute: AuthenticatedDashboardReglagesRoute,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
     AuthenticatedDashboardCommandesOrderIdRoute:
       AuthenticatedDashboardCommandesOrderIdRoute,
@@ -584,11 +648,13 @@ const AuthenticatedRouteRouteWithChildren =
 interface BSlugRouteChildren {
   BSlugIndexRoute: typeof BSlugIndexRoute
   BSlugPProductIdRoute: typeof BSlugPProductIdRoute
+  BSlugPromoPromoIdRoute: typeof BSlugPromoPromoIdRoute
 }
 
 const BSlugRouteChildren: BSlugRouteChildren = {
   BSlugIndexRoute: BSlugIndexRoute,
   BSlugPProductIdRoute: BSlugPProductIdRoute,
+  BSlugPromoPromoIdRoute: BSlugPromoPromoIdRoute,
 }
 
 const BSlugRouteWithChildren = BSlugRoute._addFileChildren(BSlugRouteChildren)

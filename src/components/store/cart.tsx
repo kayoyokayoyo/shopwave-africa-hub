@@ -1,6 +1,17 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type CartItem = { key: string; productId: string; name: string; price: number; currency: string; qty: number; variant?: string; image?: string };
+export type CartItem = {
+  key: string;
+  productId: string;
+  name: string;
+  price: number;
+  currency: string;
+  qty: number;
+  variant?: string;
+  image?: string;
+  promo_id?: string | null;
+  original_price?: number;
+};
 
 type Ctx = {
   items: CartItem[];

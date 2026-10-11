@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useMyShop, useShopProducts } from "@/hooks/useMyShop";
+import { useMyShop, useShopProducts, useShopPromotions } from "@/hooks/useMyShop";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/boutique")({
 function ShopSettings() {
   const { data: shop } = useMyShop();
   const { data: products } = useShopProducts(shop?.id);
+  const { data: promotions } = useShopPromotions(shop?.id);
   const qc = useQueryClient();
   const [draft, setDraft] = useState<ShopDraft | null>(null);
   const [busy, setBusy] = useState(false);
@@ -62,9 +63,9 @@ function ShopSettings() {
           <TabsContent value="contact" className="mt-5"><ContactFields draft={draft} set={set} /></TabsContent>
         </Tabs>
         <div className="sticky bottom-20 mt-6 lg:bottom-4"><Button variant="hero" size="lg" className="w-full" onClick={save} disabled={busy}>{busy ? "Enregistrement…" : "Enregistrer"}</Button></div>
-        <div className="mt-8 lg:hidden"><ShopPreview draft={draft} products={products} /></div>
+        <div className="mt-8 lg:hidden"><ShopPreview draft={draft} products={products} promotions={promotions} /></div>
       </div>
-      <div className="hidden lg:sticky lg:top-20 lg:block lg:self-start"><ShopPreview draft={draft} products={products} /></div>
+      <div className="hidden lg:sticky lg:top-20 lg:block lg:self-start"><ShopPreview draft={draft} products={products} promotions={promotions} /></div>
     </div>
   );
 }

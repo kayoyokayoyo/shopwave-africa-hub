@@ -2,7 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-const uploadSchema = z.object({ kind: z.enum(["product", "storefront"]) });
+const uploadSchema = z.object({ kind: z.enum(["product", "storefront", "promo"]) });
 
 export type CloudinaryUploadKind = z.infer<typeof uploadSchema>["kind"];
 export type CloudinaryUploadSignature = {
@@ -31,12 +31,13 @@ export const cloudinaryUploadSignature = createServerFn({ method: "POST" })
       .eq("owner_id", context.userId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (data.kind === "product" && !shop) throw new Error("Créez d’abord votre boutique");
+    if ((data.kind === "product" || data.kind === "promo") && !shop) throw new Error("Créez d’abord votre boutique");
 
     const { getCloudinary, getCloudinaryConfig } = await import("@/lib/cloudinary.server");
     const cloud = getCloudinary();
     const config = getCloudinaryConfig();
-    const folder = `marketnet/shops/${context.userId}/${data.kind === "product" ? "products" : "storefront"}`;
+    const subFolder = data.kind === "product" ? "products" : data.kind === "promo" ? "promotions" : "storefront";
+    const folder = `marketnet/shops/${context.userId}/${subFolder}`;
     const publicId = crypto.randomUUID();
     const timestamp = Math.floor(Date.now() / 1000);
     const signedParams = { asset_folder: folder, public_id: publicId, timestamp };

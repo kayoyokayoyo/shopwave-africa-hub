@@ -1,4 +1,4 @@
-import { Clock, MapPin, Facebook, Instagram, MessageCircle, Plus, Star, ShoppingBag } from "lucide-react";
+import { Clock, MapPin, Facebook, Instagram, MessageCircle, Plus, Star, ShoppingBag, Package } from "lucide-react";
 import type { Shop, Product } from "@/hooks/useMyShop";
 import { formatPrice, mediaUrl } from "@/lib/marketnet";
 import { cn } from "@/lib/utils";
@@ -114,12 +114,19 @@ export function StoreHeader({ shop, compact }: { shop: ShopLike; compact?: boole
 }
 
 export function ProductCard({ product, onAdd, href }: {
-  product: Pick<Product, "name" | "price" | "currency" | "images" | "status" | "featured">;
+  product: Pick<Product, "name" | "price" | "currency" | "images" | "status" | "featured"> & {
+    original_price?: number;
+    discounted_price?: number | null;
+    discount_badge?: string | null;
+  };
   onAdd?: () => void;
   href?: React.ReactNode;
 }) {
   const img = mediaUrl(product.images?.[0]);
   const out = product.status === "out_of_stock";
+  const isDiscounted = product.discounted_price != null && product.discounted_price < Number(product.price);
+  const displayPrice = isDiscounted ? product.discounted_price! : Number(product.price);
+
   return (
     <div className="group relative overflow-hidden rounded-2xl bg-shop-card shadow-soft transition-shadow hover:shadow-md">
       {/* Image */}
@@ -127,10 +134,15 @@ export function ProductCard({ product, onAdd, href }: {
         {img
           ? <img src={img} alt={product.name} loading="lazy" decoding="async"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.06]" />
-          : <div className="grid h-full place-items-center text-4xl opacity-40">🛍️</div>
+          : <div className="grid h-full place-items-center text-muted-foreground/40"><Package className="h-10 w-10 opacity-40" /></div>
         }
         {/* Overlays */}
-        {product.featured && (
+        {product.discount_badge && (
+          <span className="absolute left-2 top-2 z-10 flex items-center rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-black text-white shadow-md animate-pulse">
+            {product.discount_badge}
+          </span>
+        )}
+        {product.featured && !product.discount_badge && (
           <span className="absolute left-2 top-2 flex items-center gap-0.5 rounded-full bg-shop px-2 py-0.5 text-[10px] font-bold text-shop-foreground shadow">
             <Star className="h-2.5 w-2.5" />Top
           </span>
@@ -158,7 +170,16 @@ export function ProductCard({ product, onAdd, href }: {
       <div className="p-3">
         <p className="line-clamp-2 text-[13px] font-medium leading-snug">{product.name}</p>
         <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-sm font-bold text-shop">{formatPrice(Number(product.price), product.currency)}</span>
+          <div className="flex flex-col">
+            {isDiscounted && (
+              <span className="text-[11px] text-shop-muted line-through">
+                {formatPrice(Number(product.price), product.currency)}
+              </span>
+            )}
+            <span className={cn("text-sm font-bold text-shop", isDiscounted && "text-red-600 dark:text-red-400 font-extrabold")}>
+              {formatPrice(displayPrice, product.currency)}
+            </span>
+          </div>
           {onAdd && !out && (
             <button
               onClick={(e) => { e.preventDefault(); e.stopPropagation(); onAdd(); }}

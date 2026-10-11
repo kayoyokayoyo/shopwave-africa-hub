@@ -1,7 +1,7 @@
-﻿import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Copy, Eye, Package, Plus, ShoppingBag, MessageCircle, ArrowRight, TrendingUp, Star, ExternalLink } from "lucide-react";
+import { Copy, Eye, Package, Plus, ShoppingBag, MessageCircle, ArrowRight, TrendingUp, Star, ExternalLink, Tag, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop, useShopProducts } from "@/hooks/useMyShop";
@@ -120,34 +120,116 @@ function Overview() {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="rounded-2xl border bg-card p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="h-11 w-11 shrink-0 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600">
-            <Package className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Ajouter un produit</p>
-            <p className="text-xs text-muted-foreground truncate">Une boutique avec photos vend mieux.</p>
-          </div>
-          <Button asChild size="sm" variant="outline" className="rounded-xl shrink-0">
-            <Link to="/dashboard/produits"><Plus className="h-4 w-4" /></Link>
-          </Button>
-        </div>
-        <div className="rounded-2xl border bg-card p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="h-11 w-11 shrink-0 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-600">
-            <Star className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-sm">Personnaliser ma boutique</p>
-            <p className="text-xs text-muted-foreground truncate">Theme, couleurs, logo...</p>
-          </div>
-          <Button asChild size="sm" variant="outline" className="rounded-xl shrink-0">
-            <Link to="/dashboard/boutique"><ArrowRight className="h-4 w-4" /></Link>
-          </Button>
-        </div>
-      </div>
+      {/* Quick Actions / Raccourcis Accueil */}
+      <DashboardShortcuts shop={shop} />
 
+    </div>
+  );
+}
+
+function DashboardShortcuts({ shop }: { shop: any }) {
+  const [dismissed, setDismissed] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        return JSON.parse(localStorage.getItem("dismissed_shortcuts") || "[]");
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  const { data: promos } = useQuery({
+    queryKey: ["promotions-count", shop.id],
+    queryFn: async () => {
+      const { count } = await supabase.from("promotions").select("*", { count: "exact", head: true }).eq("shop_id", shop.id);
+      return count || 0;
+    },
+  });
+
+  const dismiss = (id: string) => {
+    const next = [...dismissed, id];
+    setDismissed(next);
+    localStorage.setItem("dismissed_shortcuts", JSON.stringify(next));
+  };
+
+  const isShopDone = !!(shop.logo_url && shop.banner_url && shop.description);
+  const isMetaDone = !!(shop.facebook || shop.instagram);
+  const isPromoDone = (promos ?? 0) > 0;
+
+  const cards = [
+    {
+      id: "shop",
+      done: isShopDone,
+      title: "Personnaliser ma boutique",
+      desc: "Ajoutez un logo, une bannière et une description.",
+      icon: Star,
+      to: "/dashboard/boutique",
+      color: "text-blue-600",
+      bg: "bg-blue-500/10",
+      border: "border-blue-500/20",
+    },
+    {
+      id: "meta",
+      done: isMetaDone,
+      title: "Connecter mes réseaux",
+      desc: "Synchronisez Facebook & Instagram pour publier vos offres.",
+      icon: Share2,
+      to: "/dashboard/meta",
+      color: "text-purple-600",
+      bg: "bg-purple-500/10",
+      border: "border-purple-500/20",
+    },
+    {
+      id: "promo",
+      done: isPromoDone,
+      title: "Créer une promotion",
+      desc: "Mettez en avant vos offres avec une bannière interactive.",
+      icon: Tag,
+      to: "/dashboard/promotions",
+      color: "text-orange-600",
+      bg: "bg-orange-500/10",
+      border: "border-orange-500/20",
+    },
+  ].filter((c) => !c.done && !dismissed.includes(c.id));
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">À faire pour booster vos ventes</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <div key={c.id} className="relative rounded-2xl border bg-card p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+              <button
+                type="button"
+                onClick={() => dismiss(c.id)}
+                className="absolute top-3 right-3 text-muted-foreground/60 hover:text-foreground text-xs p-1"
+                title="Masquer"
+                aria-label="Masquer ce conseil"
+              >
+                ✕
+              </button>
+              <div className="flex items-start gap-3">
+                <div className={`h-10 w-10 shrink-0 rounded-xl flex items-center justify-center border ${c.bg} ${c.color} ${c.border}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 pr-4">
+                  <p className="font-bold text-sm text-foreground">{c.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-snug">{c.desc}</p>
+                </div>
+              </div>
+              <div className="mt-4 pt-3 border-t flex justify-end">
+                <Button asChild size="sm" variant="outline" className="rounded-xl text-xs font-semibold">
+                  <Link to={c.to}>Commencer <ArrowRight className="ml-1 h-3.5 w-3.5" /></Link>
+                </Button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

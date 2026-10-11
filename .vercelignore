@@ -4,4 +4,12 @@ dist
 .git
 .lovable
 *.log
-.env.local
+.env
+.env.*
+!.env.example
+supabase/migrations/*.sql
+scripts/
+drizzle/
+test_count.mjs
+migration-output.txt
+

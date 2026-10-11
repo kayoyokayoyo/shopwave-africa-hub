@@ -45,3 +45,45 @@ export function useShopCategories(shopId?: string) {
     },
   });
 }
+
+export function useShopPromotions(shopId?: string) {
+  return useQuery({
+    queryKey: ["shop-promotions-active", shopId],
+    enabled: !!shopId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("promotions")
+        .select(`
+          id, title, description, badge_label, image_url, template, discount_type, discount_value, button_label, starts_at, ends_at, position,
+          promotion_products (product_id)
+        `)
+        .eq("shop_id", shopId!)
+        .eq("status", "published")
+        .eq("is_hidden", false)
+        .order("position", { ascending: true });
+      if (error) throw error;
+
+      const nowMs = Date.now();
+      const valid = (data ?? []).filter((p) => {
+        if (p.ends_at && new Date(p.ends_at).getTime() <= nowMs) return false;
+        if (p.starts_at && new Date(p.starts_at).getTime() > nowMs) return false;
+        return true;
+      });
+
+      return valid.map((p) => ({
+        id: p.id,
+        title: p.title,
+        description: p.description,
+        badge_label: (p as any).badge_label,
+        image_url: p.image_url,
+        template: p.template,
+        discount_type: p.discount_type,
+        discount_value: p.discount_value,
+        button_label: p.button_label,
+        ends_at: p.ends_at,
+        product_ids: (p.promotion_products ?? []).map((pp: any) => pp.product_id),
+      }));
+    },
+  });
+}
+

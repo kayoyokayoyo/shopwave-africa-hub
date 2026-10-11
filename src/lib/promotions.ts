@@ -5,12 +5,12 @@ export type PromotionProduct = Tables<"promotion_products">;
 export type PromoTemplate = "fullscreen" | "split" | "badge" | "minimal" | "countdown";
 export type DiscountType = "percent" | "amount";
 
-export const PROMO_TEMPLATES: { id: PromoTemplate; name: string; desc: string }[] = [
-  { id: "fullscreen", name: "Plein écran", desc: "Grande photo, texte par-dessus" },
-  { id: "split", name: "Texte + image", desc: "Texte à gauche, image à droite" },
-  { id: "badge", name: "Badge réduction", desc: "Gros badge « -25 % »" },
-  { id: "minimal", name: "Minimal", desc: "Texte seul, image facultative" },
-  { id: "countdown", name: "Compte à rebours", desc: "Temps restant avant la fin" },
+export const PROMO_TEMPLATES: { id: PromoTemplate; name: string; desc: string; tag: string }[] = [
+  { id: "fullscreen", name: "Hero Immersif", desc: "Photo pleine largeur avec cartouche en verre dépoli", tag: "Impact" },
+  { id: "split", name: "Duo Showcase", desc: "Produit en vedette & offre percutante côte-à-côte", tag: "Catalogue" },
+  { id: "badge", name: "Flash Impact", desc: "Badge promotionnel relief & dégradé vibrant", tag: "Réduction" },
+  { id: "countdown", name: "Chrono Urgence", desc: "Compte à rebours animé pour stimuler la vente", tag: "Flash" },
+  { id: "minimal", name: "Studio Élégance", desc: "Typographie épurée & visuel flottant contemporain", tag: "Éditorial" },
 ];
 
 export const PROMO_STATUS: Record<string, { label: string; cls: string }> = {

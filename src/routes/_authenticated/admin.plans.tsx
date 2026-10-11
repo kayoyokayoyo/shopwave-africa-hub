@@ -1,4 +1,4 @@
-﻿import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -95,7 +95,18 @@ function PlanEditor({ plan }: { plan: Plan }) {
   async function save() {
     setIsSaving(true);
     try {
-      const { error } = await supabase.from("plans").update({ name: p.name, price_usd: p.price_usd, max_products: p.max_products, max_photos: p.max_photos, meta_access: p.meta_access, advanced_themes: p.advanced_themes, advanced_stats: p.advanced_stats, active: p.active }).eq("id", p.id);
+      const { error } = await supabase.from("plans").update({
+        name: p.name,
+        price_usd: p.price_usd,
+        max_products: p.max_products,
+        max_photos: p.max_photos,
+        max_active_promotions: (p as any).max_active_promotions,
+        promo_templates: (p as any).promo_templates,
+        meta_access: p.meta_access,
+        advanced_themes: p.advanced_themes,
+        advanced_stats: p.advanced_stats,
+        active: p.active,
+      }).eq("id", p.id);
       if (error) throw error;
       await logAction("plan.update", p.id, { price: p.price_usd, max_products: p.max_products });
       toast.success("Plan '" + p.name + "' mis a jour"); 
@@ -197,6 +208,17 @@ function PlanEditor({ plan }: { plan: Plan }) {
             readOnly={!isEditing} 
           />
         </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label className="text-[11px] text-muted-foreground uppercase flex items-center gap-1">Promotions actives max</Label>
+        <Input
+          className={`font-mono text-center h-10 ${!isEditing ? 'bg-transparent border-transparent px-0 focus-visible:ring-0 shadow-none' : 'bg-background'}`}
+          placeholder="Illimite (vide)"
+          value={(p as any).max_active_promotions ?? ""}
+          onChange={(e) => setP({ ...p, max_active_promotions: e.target.value ? Number(e.target.value) : null } as any)}
+          readOnly={!isEditing}
+        />
       </div>
       
       <div className="space-y-1 pt-2 border-t border-dashed">

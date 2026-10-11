@@ -1,4 +1,4 @@
-﻿import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Store, MapPin, Eye, Globe, Mail, AlertTriangle, Ban, CheckCircle2, Trash2, Settings } from "lucide-react";
@@ -240,6 +240,71 @@ function ShopDetail() {
             )}
           </div>
         </div>
+
+        {/* Promotions moderation section */}
+        <AdminShopPromotions shopId={shopId} />
+      </div>
+    </div>
+  );
+}
+
+function AdminShopPromotions({ shopId }: { shopId: string }) {
+  const qc = useQueryClient();
+  const { data: promos } = useQuery({
+    queryKey: ["adminShopPromos", shopId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("promotions")
+        .select("id, title, status, is_hidden, created_at, template, image_url")
+        .eq("shop_id", shopId)
+        .order("created_at", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  async function toggleHide(promoId: string, current: boolean) {
+    const { error } = await supabase.from("promotions").update({ is_hidden: !current }).eq("id", promoId);
+    if (error) return toast.error(error.message);
+    toast.success(!current ? "Promotion masquée" : "Promotion rendue visible");
+    qc.invalidateQueries({ queryKey: ["adminShopPromos", shopId] });
+  }
+
+  async function removePromo(promoId: string) {
+    if (!confirm("Supprimer cette promotion en tant qu'administrateur ?")) return;
+    const { error } = await supabase.from("promotions").delete().eq("id", promoId);
+    if (error) return toast.error(error.message);
+    toast.success("Promotion supprimée");
+    qc.invalidateQueries({ queryKey: ["adminShopPromos", shopId] });
+  }
+
+  if (!promos || promos.length === 0) return null;
+
+  return (
+    <div className="p-6 border-t space-y-4">
+      <h3 className="font-semibold text-base">Promotions créées ({promos.length})</h3>
+      <div className="space-y-2">
+        {promos.map((p) => (
+          <div key={p.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border p-3.5 bg-muted/20">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm">{p.title}</span>
+                {p.is_hidden && (
+                  <span className="rounded bg-red-500/15 text-red-600 px-2 py-0.5 text-[10px] font-bold">Masquée par admin</span>
+                )}
+                <span className="text-xs text-muted-foreground">({p.status})</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-0.5">Modèle: {p.template}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button size="sm" variant="outline" onClick={() => toggleHide(p.id, p.is_hidden)} className="rounded-xl text-xs">
+                {p.is_hidden ? "Démasquer" : "Masquer"}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => removePromo(p.id)} className="rounded-xl text-xs text-red-500 hover:bg-red-500/10">
+                Supprimer
+              </Button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

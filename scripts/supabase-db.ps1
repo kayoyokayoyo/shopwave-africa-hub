@@ -11,19 +11,19 @@ if (-not (Test-Path $envPath)) {
   throw "Fichier .env introuvable à la racine du projet."
 }
 
-$line = Get-Content $envPath | Where-Object { $_ -match '^\s*LOVABLE_DB_MIGRATION_URL\s*=' } | Select-Object -First 1
+$line = Get-Content $envPath | Where-Object { $_ -match '^\s*(SUPABASE_DB_MIGRATION_URL|LOVABLE_DB_MIGRATION_URL)\s*=' } | Select-Object -First 1
 if (-not $line) {
-  throw "LOVABLE_DB_MIGRATION_URL est absente de .env."
+  throw "SUPABASE_DB_MIGRATION_URL (ou LOVABLE_DB_MIGRATION_URL) est absente de .env."
 }
 
-$dbUrl = ($line -replace '^\s*LOVABLE_DB_MIGRATION_URL\s*=\s*', '').Trim().Trim('"', "'")
+$dbUrl = ($line -replace '^\s*(SUPABASE_DB_MIGRATION_URL|LOVABLE_DB_MIGRATION_URL)\s*=\s*', '').Trim().Trim('"', "'")
 if (-not $dbUrl) {
-  throw "LOVABLE_DB_MIGRATION_URL est vide."
+  throw "L'URL de migration Supabase est vide."
 }
 
 $parsedUrl = [uri]$dbUrl
 if ($parsedUrl.Host -notmatch '\.pooler\.supabase\.com$' -or $parsedUrl.Port -ne 5432) {
-  throw "Utilise l'URI Session pooler Supabase (hôte .pooler.supabase.com, port 5432) dans LOVABLE_DB_MIGRATION_URL."
+  throw "Utilise l'URI Session pooler Supabase (hôte .pooler.supabase.com, port 5432) dans SUPABASE_DB_MIGRATION_URL."
 }
 
 if ($List) {

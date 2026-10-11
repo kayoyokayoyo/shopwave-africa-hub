@@ -34,13 +34,28 @@ export function CartSheet({ shop, origin, className }: { shop: ShopInfo; origin:
     await supabase.from("orders").insert({
       shop_id: shop.id, 
       customer_name: `${customer} - ${addr}`,
-      items: items.map((i) => ({ productId: i.productId, name: i.name, qty: i.qty, price: i.price, currency: i.currency, variant: i.variant ?? null })),
+      items: items.map((i) => ({
+        productId: i.productId,
+        name: i.name,
+        qty: i.qty,
+        price: i.price,
+        original_price: i.original_price ?? i.price,
+        discount_applied: i.original_price && i.original_price > i.price ? i.original_price - i.price : null,
+        promotion_id: i.promo_id ?? null,
+        currency: i.currency,
+        variant: i.variant ?? null,
+      })),
       total: currencies.length === 1 ? totals[currencies[0]] : 0,
       currency: currencies.length === 1 ? currencies[0] : "MIXTE",
     });
 
     const lines = items.map((i) => {
-      return `📦 *${i.qty}x ${i.name}*${i.variant ? ` (${i.variant})` : ""}\n💰 ${formatPrice(i.price * i.qty, i.currency)}`;
+      const hasDiscount = i.original_price && i.original_price > i.price;
+      let priceTxt = `💰 ${formatPrice(i.price * i.qty, i.currency)}`;
+      if (hasDiscount) {
+        priceTxt += ` (Prix initial : ${formatPrice(i.original_price! * i.qty, i.currency)}, Réduction : -${formatPrice((i.original_price! - i.price) * i.qty, i.currency)})`;
+      }
+      return `📦 *${i.qty}x ${i.name}*${i.variant ? ` (${i.variant})` : ""}\n${priceTxt}`;
     });
     
     let msg = `Bonjour *${shop.name}* 👋\n\nVoici ma commande :\n\n${lines.join("\n\n")}\n\n====================\n*TOTAL : ${totalStr}*\n====================\n\n👤 *Livraison*\n• Nom : ${customer}\n• Adresse : ${addr}`;

@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PackageSearch, Search, X, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { PackageSearch, Search, X, SlidersHorizontal, ChevronDown, Package } from "lucide-react";
 import { publicShopQuery } from "@/lib/storefront.query";
 import { StoreHeader, ProductCard } from "@/components/store/StoreParts";
+import { PromoBanner, type PublicPromo } from "@/components/promo/PromoBanner";
 import { useCart } from "@/components/store/cart";
 import { cn } from "@/lib/utils";
 import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
@@ -15,7 +16,7 @@ export const Route = createFileRoute("/b/$slug/")({
 function ShopHome() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(publicShopQuery(slug));
-  const { shop, products, categories } = data;
+  const { shop, products, categories, promos } = data;
   const { add } = useCart();
   const navigate = useNavigate();
 
@@ -124,13 +125,20 @@ function ShopHome() {
     <div className="min-h-screen">
       <StoreHeader shop={shop} />
 
+      {/* ── Bannière Promotions actives ────────────────────── */}
+      {promos && promos.length > 0 && (
+        <div className="mx-auto max-w-5xl px-4 pt-4">
+          <PromoBanner promos={promos} slug={slug} currency={shop.currency} whatsapp={shop.whatsapp} />
+        </div>
+      )}
+
       <div className="mx-auto max-w-5xl px-4 pb-10">
 
         {/* ── À la une ──────────────────────────────────── */}
         {!filtering && featured.length > 0 && (
           <section className="mt-6">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-shop-heading text-lg font-bold">⭐ À la une</h2>
+              <h2 className="font-shop-heading text-lg font-bold">À la une</h2>
               <span className="text-xs text-shop-muted">{featured.length} article{featured.length > 1 ? "s" : ""}</span>
             </div>
             <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-3 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
@@ -226,7 +234,7 @@ function ShopHome() {
                         <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-shop-card">
                           {p.images[0]
                             ? <img src={mediaUrl(p.images[0])!} alt="" className="h-full w-full object-cover" />
-                            : <div className="grid h-full place-items-center text-xl">🛍️</div>
+                            : <div className="grid h-full place-items-center"><Package className="h-4 w-4 opacity-40" /></div>
                           }
                         </div>
                         <div className="min-w-0 flex-1">

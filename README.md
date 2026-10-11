@@ -1,6 +1,4 @@
-# ShopWave Africa
-
-# Prompt Lovable : MarketNet
+# MarketNet — Plateforme E-Commerce WhatsApp & Multi-Boutiques
 
 
 
@@ -194,17 +192,43 @@ Style moderne, chaleureux et fiable. Palette sobre (une couleur principale vive,
 
 Commence par les étapes 1 à 4 et demande-moi confirmation avant de passer aux suivantes.
 
-This project was built with [Lovable](https://lovable.dev).
+## 4. Module Promotions (Ventes Flash & Campagnes)
 
-**Live app**: https://shopwave-africa-hub.lovable.app
+Le module de promotion permet aux commerçants de lancer des campagnes marketing percutantes et ciblées :
 
-## Build with Lovable
+- **5 Modèles Graphiques Modernes (`PromoTemplate`) :**
+  1. `fullscreen` (Hero Immersif) : Fond plein écran avec cartouche en verre dépoli et dégradé cinématique.
+  2. `split` (Duo Showcase) : Affichage asymétrique équilibré texte / produit.
+  3. `badge` (Flash Impact) : Badge coloré en relief et contraste élevé.
+  4. `countdown` (Chrono Urgence) : Vente flash avec compte à rebours dynamique (jours, heures, minutes, secondes).
+  5. `minimal` (Studio Élégance) : Typographie soignée épurée et pastille d'édition spéciale.
+- **Champs & Paramétrage :**
+  - **Titre** de l'offre (max 80 car).
+  - **Badge / Étiquette** : **Obligatoire** (ex: *Vente Flash*, *Promo Exclusive*, *Nouveauté*, *Liquidation*). Aucun texte fictif forcé.
+  - **Description** : Détails et conditions optionnels.
+  - **Réduction globale** : Pourcentage (%) ou montant fixe dans la devise de la boutique.
+  - **Validité** : Date de début et fin optionnelles avec expiration automatique.
+  - **Bouton d'action** : Label personnalisable (*Voir l'offre* par défaut).
+  - **Articles ciblés** : Jusqu'à 24 produits avec réductions unitaires possibles. Si aucun produit n'est choisi, le bouton ouvre un contact WhatsApp direct.
+- **Storefront & Expérience Client :**
+  - Défilement carrousel automatique fluide avec reprise intelligente après swipe ou clic.
+  - Hauteur uniforme et compacte adaptée aux écrans mobiles (190px) et ordinateurs (260px).
+  - Boutons de partage et copie de lien réservés au dashboard commerçant.
+  - Synchronisation en direct dans l'aperçu boutique du dashboard (`ShopPreview`).
+- **Sécurité & RLS :**
+  - Isolation stricte des données par boutique (`shop_id`).
+  - Validation par trigger `promotion_guard` pour respecter les quotas selon le forfait.
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/068af794-63d9-4fb1-994f-da08829468a0).
+## 5. Déploiement en Production sur Vercel
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+1. **Build Command :** `NITRO_PRESET=vercel npm run build` (configuré dans `vercel.json`).
+2. **Fichier `.vercelignore` :** Exclut les migrations SQL brutes, scripts locaux et fichiers d'environnement secrets pour un bundle minimal et ultra-rapide.
+3. **Variables d'environnement requises sur Vercel :**
+   - `VITE_SUPABASE_URL` et `SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` et `SUPABASE_PUBLISHABLE_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (server-only)
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+   - `CRON_SECRET`
 
 ## Development
 
