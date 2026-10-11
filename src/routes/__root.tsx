@@ -33,11 +33,34 @@ function NotFoundComponent() {
 }
 
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
-  console.error(error);
+  console.error("Route error:", error);
   const router = useRouter();
+  const [retrying, setRetrying] = useState(false);
+
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
+
+    // Auto-retry once on hydration/network glitch
+    const timer = setTimeout(() => {
+      try {
+        setRetrying(true);
+        router.invalidate();
+        reset();
+      } catch {
+        setRetrying(false);
+      }
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [error]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleRetry = () => {
+    setRetrying(true);
+    router.invalidate();
+    reset();
+    setTimeout(() => setRetrying(false), 1000);
+  };
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
@@ -45,10 +68,11 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
         <p className="mt-2 text-sm text-muted-foreground">Vérifiez votre connexion et réessayez.</p>
         <div className="mt-6 flex justify-center gap-2">
           <button
-            onClick={() => { router.invalidate(); reset(); }}
-            className="inline-flex h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground"
+            onClick={handleRetry}
+            disabled={retrying}
+            className="inline-flex h-11 items-center rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground disabled:opacity-50"
           >
-            Réessayer
+            {retrying ? "Rechargement…" : "Réessayer"}
           </button>
           <a href="/" className="inline-flex h-11 items-center rounded-xl border border-input bg-card px-5 text-sm font-semibold">
             Accueil
