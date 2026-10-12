@@ -423,7 +423,6 @@ export type Database = {
       }
       promotions: {
         Row: {
-          badge_label: string | null
           button_label: string
           created_at: string
           description: string | null
@@ -442,7 +441,6 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          badge_label?: string | null
           button_label?: string
           created_at?: string
           description?: string | null
@@ -461,7 +459,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          badge_label?: string | null
           button_label?: string
           created_at?: string
           description?: string | null
