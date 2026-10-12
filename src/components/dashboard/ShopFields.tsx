@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { Check, ImagePlus, Loader2 } from "lucide-react";
+import { Check, ImagePlus, Loader2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { THEMES, SHOP_CATEGORIES, PRESET_COLORS, mediaUrl, slugify } from "@/lib/marketnet";
+import { supabase } from "@/integrations/supabase/client";
+import { THEMES, SHOP_CATEGORIES, PRESET_COLORS, mediaUrl, slugify, SLUG_RE } from "@/lib/marketnet";
 import { compressAndUpload } from "@/lib/upload";
 import { cloudinaryUploadSignature } from "@/lib/cloudinary.functions";
 import { cn } from "@/lib/utils";
