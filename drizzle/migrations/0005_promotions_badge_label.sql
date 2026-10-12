@@ -1,0 +1,1 @@
+alter table public.promotions add column if not exists badge_label text;

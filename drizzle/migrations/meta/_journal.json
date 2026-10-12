@@ -36,6 +36,13 @@
       "when": 1791787545383,
       "tag": "0004_slug_available_function",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791787594197,
+      "tag": "0005_promotions_badge_label",
+      "breakpoints": true
     }
   ]
 }
