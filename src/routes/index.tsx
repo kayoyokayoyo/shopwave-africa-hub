@@ -786,8 +786,17 @@ function Index() {
       <footer className="border-t bg-card py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            {/* Logo footer */}
-            <Link to="/" className="flex items-center gap-2 font-extrabold tracking-tight text-foreground text-lg">
+            {/* Logo footer — clic pour remonter en haut avec défilement fluide */}
+            <Link
+              to="/"
+              onClick={(e) => {
+                if (window.location.pathname === "/") {
+                  e.preventDefault();
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }
+              }}
+              className="flex items-center gap-2 font-extrabold tracking-tight text-foreground text-lg transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+            >
               <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary text-primary-foreground font-black text-base shadow-md shadow-primary/30">M</span>
               Market<span className="text-primary">Net</span>
             </Link>
