@@ -360,3 +360,4 @@ Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, d�
 - **Filtres Avancés :** Implémentation d'un calendrier Popover natif (`react-day-picker` / Shadcn) permettant de filtrer avec précision par date unique ou par plage de dates, avec gestion parfaite des collisions et de l'espace sur mobile.
 - **Responsive Design :** Amélioration de l'UX mobile sur les listes de produits avec l'adoption du mode `flex-col`, tronquant correctement les longs noms sans casser l'interface ni masquer les totaux.
 - **Template WhatsApp Épuré :** Suppression des liens web des produits et des champs redondants (numéro de téléphone) dans le message WhatsApp pour un rendu beaucoup plus professionnel et propre côté client.
+🧡🤍💛🤍💛💗💓💞 MarketNet 
