@@ -30,16 +30,37 @@ type P = { draft: ShopDraft; set: (p: Partial<ShopDraft>) => void };
 const sel = "flex h-12 w-full rounded-xl border border-input bg-card px-3 text-sm";
 
 export function IdentityFields({ draft, set, slugLocked }: P & { slugLocked?: boolean }) {
+  const [slugState, setSlugState] = useState<"idle" | "checking" | "free" | "taken">("idle");
+  const checkId = useRef(0);
+
+  useEffect(() => {
+    if (slugLocked || !SLUG_RE.test(draft.slug)) { setSlugState("idle"); return; }
+    setSlugState("checking");
+    const id = ++checkId.current;
+    const t = setTimeout(async () => {
+      const { data, error } = await supabase.rpc("slug_available", { _slug: draft.slug });
+      if (id !== checkId.current) return;
+      setSlugState(error ? "idle" : data ? "free" : "taken");
+    }, 500);
+    return () => clearTimeout(t);
+  }, [draft.slug, slugLocked]);
+
   return (
     <div className="space-y-4">
       <Field label="Nom de la boutique"><Input className="h-12" value={draft.name} maxLength={80}
         onChange={(e) => set({ name: e.target.value, ...(slugLocked === undefined ? { slug: slugify(e.target.value) } : {}) })} /></Field>
       <Field label="Lien de la boutique" hint={slugLocked ? "Le lien a déjà été modifié une fois." : "Modifiable une seule fois après la création."}>
-        <div className="flex h-12 items-center overflow-hidden rounded-xl border border-input bg-card text-sm">
+        <div className={cn("flex h-12 items-center overflow-hidden rounded-xl border bg-card text-sm",
+          slugState === "taken" ? "border-destructive" : slugState === "free" ? "border-green-600" : "border-input")}>
           <span className="pl-3 text-muted-foreground">marketnet.com/b/</span>
           <input className="h-full flex-1 bg-transparent pr-3 outline-none disabled:opacity-60" value={draft.slug} disabled={slugLocked}
             onChange={(e) => set({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 42) })} />
+          {!slugLocked && slugState === "checking" && <Loader2 className="mr-3 h-4 w-4 animate-spin text-muted-foreground" />}
+          {!slugLocked && slugState === "free" && <Check className="mr-3 h-4 w-4 text-green-600" />}
+          {!slugLocked && slugState === "taken" && <XCircle className="mr-3 h-4 w-4 text-destructive" />}
         </div>
+        {!slugLocked && slugState === "taken" && <p className="text-xs font-medium text-destructive">Ce lien est déjà pris, choisissez-en un autre.</p>}
+        {!slugLocked && slugState === "free" && <p className="text-xs font-medium text-green-600">Ce lien est disponible.</p>}
       </Field>
       <Field label="Catégorie">
         <select className={sel} value={draft.category} onChange={(e) => set({ category: e.target.value })}>
