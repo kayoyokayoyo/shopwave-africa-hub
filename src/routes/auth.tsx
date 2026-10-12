@@ -8,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
 import { ArrowLeft, CheckCircle2, Loader2, Store, Lock, Mail, User, Eye, EyeOff } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({ mode: s.mode === "signup" ? "signup" : s.mode === "forgot" ? "forgot" : "login" }) as { mode: "login" | "signup" | "forgot" },
