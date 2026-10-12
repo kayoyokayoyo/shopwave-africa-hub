@@ -106,7 +106,7 @@ function AuthPage() {
             </FadeIn>
           )}
 
-          <FadeIn delay={100}>
+          <FadeIn>
             <h1 className="text-3xl font-extrabold tracking-tight">
               {mode === "signup" ? "Créer mon compte" : mode === "forgot" ? "Mot de passe oublié ?" : "Bon retour !"}
             </h1>
@@ -116,7 +116,7 @@ function AuthPage() {
           </FadeIn>
 
           {sent ? (
-            <FadeIn delay={200} className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
+            <FadeIn className="mt-8 rounded-2xl border border-primary/20 bg-primary/5 p-6 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
                 <CheckCircle2 className="h-6 w-6" />
               </div>
@@ -124,7 +124,7 @@ function AuthPage() {
               <p className="mt-2 text-sm text-muted-foreground">{sent}</p>
             </FadeIn>
           ) : (
-            <FadeIn delay={200}>
+            <FadeIn>
               <form onSubmit={submit} className="mt-8 space-y-5">
                 {mode === "signup" && (
                   <div className="space-y-2">
@@ -168,7 +168,7 @@ function AuthPage() {
             </FadeIn>
           )}
 
-          <FadeIn delay={300} className="mt-8 text-center text-sm text-muted-foreground">
+          <FadeIn className="mt-8 text-center text-sm text-muted-foreground">
             {mode === "login" ? (
               <>Pas encore de compte ? <button onClick={() => setMode("signup")} className="font-bold text-primary hover:underline">Créer mon compte</button></>
             ) : mode === "signup" ? (
