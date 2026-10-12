@@ -29,9 +29,9 @@ const schema = z.object({
   name: z.string().trim().max(80).optional(),
 });
 
-function FadeIn({ children, className, delay = 0 }: { children: React.ReactNode, className?: string, delay?: number }) {
+function FadeIn({ children, className }: { children: React.ReactNode, className?: string }) {
   return (
-    <div className={cn("animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both", className)} style={{ animationDelay: `${delay}ms` }}>
+    <div className={className}>
       {children}
     </div>
   );
