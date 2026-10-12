@@ -1,5 +1,7 @@
-﻿import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { getDeletionEmailHtml } from "./template.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,9 +37,15 @@ serve(async (req) => {
     }
 
     const { email, user_metadata } = user;
-    const fullName = user_metadata?.full_name || "Cher utilisateur";
+    if (!email) {
+      return new Response(JSON.stringify({ success: true, note: "No email address found" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const fullName = user_metadata?.full_name || "Cher commerçant";
     const deletedAt = new Date().toLocaleString("fr-FR", {
-      timeZone: "Africa/Abidjan",
+      timeZone: "Africa/Kinshasa",
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -45,42 +53,60 @@ serve(async (req) => {
       minute: "2-digit",
     });
 
-    const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+    const smtpHost = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
+    const smtpPort = Number(Deno.env.get("SMTP_PORT") || "465");
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPass = Deno.env.get("SMTP_PASSWORD") || Deno.env.get("SMTP_PASS");
+    const senderName = Deno.env.get("SMTP_FROM_NAME") || "MarketNet Africa";
 
-    if (!RESEND_API_KEY) {
-      console.log(`[send-deletion-email] Would send email to ${email}`);
-      return new Response(JSON.stringify({ success: true, note: "Email skipped (no RESEND_API_KEY)" }), {
+    if (!smtpUser || !smtpPass) {
+      console.warn("[send-deletion-email] Missing SMTP credentials (SMTP_USER / SMTP_PASSWORD). Email skipped.");
+      return new Response(JSON.stringify({ success: true, note: "Email skipped (SMTP not configured)" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const emailHtml = `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/><title>Suppression compte MarketNet</title></head><body style="margin:0;padding:0;background:#f6f6f7;font-family:'Segoe UI',Helvetica,Arial,sans-serif;"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f6f6f7;padding:40px 16px;"><tr><td align="center"><table width="100%" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);"><tr><td style="background:linear-gradient(135deg,#dc2626,#b91c1c);padding:32px 32px 28px;text-align:center;"><h1 style="color:#ffffff;font-size:22px;font-weight:700;margin:0;">Compte supprime</h1><p style="color:rgba(255,255,255,0.8);font-size:14px;margin:8px 0 0;">MarketNet Africa</p></td></tr><tr><td style="padding:32px;"><p style="font-size:16px;color:#1a1a2e;font-weight:600;margin:0 0 8px;">Bonjour ${fullName},</p><p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 20px;">Nous vous confirmons que votre compte <strong>MarketNet</strong> ainsi que toutes vos donnees ont ete <strong>definitivement supprimes</strong> le :</p><div style="background:#fff5f5;border:1px solid #fecaca;border-radius:12px;padding:16px 20px;margin:0 0 20px;text-align:center;"><span style="font-size:15px;font-weight:700;color:#dc2626;">${deletedAt}</span></div><p style="font-size:14px;color:#555;line-height:1.7;margin:0 0 12px;">Les donnees suivantes ont ete supprimees :</p><ul style="font-size:14px;color:#555;line-height:2;margin:0 0 24px;padding-left:20px;"><li>Votre profil et informations personnelles</li><li>Votre boutique et tous vos produits</li><li>Vos commandes et historiques</li><li>Vos connexions et jetons Meta (Facebook/Instagram)</li><li>Vos promotions et rapports</li></ul><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:16px 20px;margin:0 0 24px;"><p style="font-size:13px;color:#166534;margin:0;line-height:1.6;">Si vous souhaitez revenir, vous pouvez creer un nouveau compte gratuitement.</p></div><p style="font-size:13px;color:#888;line-height:1.6;margin:0;">Si vous n'avez pas demande cette suppression, contactez-nous a <a href="mailto:support@marketnet.africa" style="color:#dc2626;text-decoration:none;">support@marketnet.africa</a>.</p></td></tr><tr><td style="background:#f9fafb;border-top:1px solid #f0f0f0;padding:20px 32px;text-align:center;"><p style="font-size:12px;color:#aaa;margin:0;">&copy; ${new Date().getFullYear()} MarketNet Africa</p></td></tr></table></td></tr></table></body></html>`;
+    const siteUrl = Deno.env.get("MARKETNET_SITE_URL") || "";
+    const supportEmail = Deno.env.get("MARKETNET_ADMIN_EMAIL") || smtpUser;
 
-    const resendResponse = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${RESEND_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "MarketNet Africa <noreply@marketnet.africa>",
-        to: [email],
-        subject: "Votre compte MarketNet a ete supprime",
-        html: emailHtml,
-      }),
+    const emailHtml = getDeletionEmailHtml({
+      fullName,
+      email,
+      deletedAt,
+      supportEmail,
+      siteUrl,
     });
 
-    if (!resendResponse.ok) {
-      const err = await resendResponse.text();
-      console.error("[send-deletion-email] Resend error:", err);
-    }
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: smtpPort === 465,
+        auth: {
+          username: smtpUser,
+          password: smtpPass,
+        },
+      },
+    });
+
+    await client.send({
+      from: `"${senderName}" <${smtpUser}>`,
+      to: email,
+      subject: "Confirmation de suppression de votre compte MarketNet",
+      html: emailHtml,
+    });
+
+    await client.close();
+
+    console.log(`[send-deletion-email] Email successfully sent to ${email} via Gmail SMTP.`);
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
     console.error("[send-deletion-email] Error:", error);
-    return new Response(JSON.stringify({ success: true, note: "Error but deletion proceeds" }), {
+    // On ne bloque jamais le flux de suppression même en cas d'erreur de mail
+    return new Response(JSON.stringify({ success: true, note: "Error while sending email, but account deletion proceeds" }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }

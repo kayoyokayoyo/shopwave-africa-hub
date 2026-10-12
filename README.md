@@ -337,6 +337,23 @@ Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, d�
 
 ## Mises à jour récentes (Octobre 2026)
 
+**Landing page & Expérience utilisateur :**
+- **Alignement & Header stable :** Logo verrouillé à gauche (`flex-shrink-0`), empêchant tout saut ou centrage intempestif lors des rafraîchissements ou du redimensionnement de la fenêtre.
+- **Mockup Hero dynamique & responsive :** Remplacement de l'ancienne grille par un mockup smartphone moderne illustrant une vraie boutique africaine (*« Awa Mode »*) avec gestion des devises locales, badges de promotions (`-20%`, `-10%`) et commandes WhatsApp.
+- **Animations au scroll légères & intelligentes (`ScrollReveal`) :** Implémentation basée sur l'`IntersectionObserver` natif avec courbe `cubic-bezier(0.16, 1, 0.3, 1)` fluide à 60 FPS, déconnexion immédiate à l'apparition (zéro impact CPU) et cascade subtile sur les cartes.
+- **Indicateur de chargement non-bloquant :** Barre de progression subtile au sommet de l'écran connectée à l'état du routeur TanStack pour éviter tout écran blanc lors des navigations.
+- **Intégration fidèle des tarifs réels :** Suppression intégrale des tarifs et fonctionnalités fictifs. La section Tarifs s'aligne à 100 % sur les données de la table `plans` de la base de données (produits, photos, promotions max, accès Meta, thèmes avancés, statistiques pro).
+- **CTA final épuré :** Suppression du bouton redondant, conservant un bouton d'action unique et contrasté : *« Créer ma boutique maintenant »*.
+
+**Authentification & Inscription (/auth) :**
+- **Refonte visuelle centrée :** Carte flottante moderne (`rounded-[2rem]`) avec switcher segmenté fluide (*Connexion* | *Inscription*), respectant rigoureusement la palette de couleurs de MarketNet.
+- **Gestion du mot de passe oublié :** Écran dédié épuré avec bouton de retour direct.
+- **Conditions d'utilisation :** Lien propre et direct vers `/terms` sur le formulaire d'inscription.
+
+**Notifications & E-mails :**
+- **Transition vers Gmail SMTP :** Remplacement de l'API Resend par le client SMTP Deno natif (`denomailer`) sur le port SSL 465 (`smtp.gmail.com`).
+- **Template de confirmation de suppression de compte :** Template HTML responsive et compréhensible avec récapitulatif détaillé des données supprimées, heure locale et coordonnées réelles issues de l'environnement.
+
 **Refonte de la gestion des commandes (Dashboard) :**
 - **Séparation Liste / Détails :** La vue des commandes (`dashboard.commandes.tsx`) a été épurée pour ne montrer que les informations essentielles. Une nouvelle page détaillée (`dashboard.commandes_.$orderId.tsx`) affiche le récapitulatif complet du client, les articles avec photos, les notes internes, et le statut.
 - **Gestion des Paniers Mixtes :** Prise en charge native des devises multiples. Le `CartSheet` enregistre la devise exacte de chaque ligne de commande. Les vues calculent et affichent dynamiquement la somme (ex: `2 700 $ + 15 000 FCFA`) au lieu du générique "Montant Mixte".

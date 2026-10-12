@@ -1,4 +1,4 @@
-import { Clock, MapPin, Facebook, Instagram, MessageCircle, Plus, Star, ShoppingBag, Package } from "lucide-react";
+import { Clock, MapPin, Facebook, Instagram, MessageCircle, Plus, Star, ShoppingBag, Package, BadgeCheck, Share2, Sparkles } from "lucide-react";
 import type { Shop, Product } from "@/hooks/useMyShop";
 import { formatPrice, mediaUrl } from "@/lib/marketnet";
 import { cn } from "@/lib/utils";
@@ -14,100 +14,140 @@ export function StoreHeader({ shop, compact }: { shop: ShopLike; compact?: boole
     <header className="pb-0">
       {/* Banner */}
       <div
-        className={cn("relative isolate w-full overflow-hidden", compact ? "h-28" : "h-44 sm:h-60")}
+        className={cn("relative isolate w-full overflow-hidden", compact ? "h-32" : "h-44 sm:h-64")}
         style={banner ? undefined : {
           backgroundImage: "radial-gradient(ellipse at 78% 12%, color-mix(in srgb, var(--shop-primary) 52%, transparent), transparent 48%), radial-gradient(ellipse at 8% 100%, color-mix(in srgb, var(--shop-primary) 24%, transparent), transparent 42%), linear-gradient(135deg, var(--shop-bg), color-mix(in srgb, var(--shop-bg) 75%, var(--shop-primary)))",
         }}
       >
-        {banner && <>
-          <img src={banner} alt={`Bannière de ${shop.name}`} className="absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-        </>}
-        {!banner && <>
-          <div aria-hidden="true" className="absolute -right-16 -top-16 h-72 w-72 rounded-full bg-shop/5 blur-3xl" />
-          <div aria-hidden="true" className="absolute -left-8 bottom-0 h-48 w-48 rounded-full bg-shop/8 blur-2xl" />
-        </>}
+        {banner && (
+          <>
+            <img src={banner} alt={`Bannière de ${shop.name}`} className="absolute inset-0 h-full w-full object-cover" fetchPriority="high" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-black/10" />
+          </>
+        )}
+        {!banner && (
+          <>
+            <div aria-hidden="true" className="absolute -right-16 -top-16 h-72 w-72 rounded-full bg-shop/10 blur-3xl" />
+            <div aria-hidden="true" className="absolute -left-8 bottom-0 h-48 w-48 rounded-full bg-shop/15 blur-2xl" />
+          </>
+        )}
       </div>
 
       <div className="mx-auto max-w-5xl px-4">
-        {/* Logo + actions row */}
+        {/* Logo + Actions Row */}
         <div className={cn(
-          "relative z-10 flex items-end justify-between gap-2",
-          compact ? "-mt-8" : "-mt-10 sm:-mt-12"
+          "relative z-10 flex items-end justify-between gap-3",
+          compact ? "-mt-10" : "-mt-12 sm:-mt-14"
         )}>
-          {/* Logo */}
-          <div
-            className="grid shrink-0 place-items-center overflow-hidden rounded-2xl border-4 border-background bg-shop-card font-shop-heading font-extrabold text-shop shadow-2xl"
-            style={{ width: compact ? 60 : 76, height: compact ? 60 : 76 }}
-          >
-            {logo
-              ? <img src={logo} alt={shop.name} className="h-full w-full object-cover" />
-              : <span className="select-none text-2xl">{shop.name.slice(0, 1)}</span>
-            }
+          {/* Logo en squircle avec ombre douce et fond contrasté */}
+          <div className="relative group shrink-0">
+            <div
+              className={cn(
+                "relative grid place-items-center overflow-hidden rounded-2xl border-4 border-background bg-card font-shop-heading font-extrabold text-shop shadow-xl ring-1 ring-black/5 transition-transform duration-200",
+                compact ? "h-16 w-16" : "h-20 w-20 sm:h-24 sm:w-24"
+              )}
+            >
+              {logo ? (
+                <img src={logo} alt={shop.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="select-none text-2xl sm:text-3xl font-extrabold text-primary">{shop.name.slice(0, 1)}</span>
+              )}
+            </div>
+            {/* Badge de boutique vérifiée / active */}
+            <div
+              className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-background p-0.5 shadow-md"
+              title="Boutique vérifiée MarketNet"
+            >
+              <BadgeCheck className="h-5 w-5 text-emerald-500 fill-emerald-500/20" />
+            </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="mb-1 flex shrink-0 items-center gap-1.5">
+          {/* Boutons d'actions rapides (WhatsApp + Réseaux) */}
+          <div className="mb-1 flex items-center gap-1.5 sm:gap-2">
             {shop.instagram && (
-              <a href={shop.instagram} target="_blank" rel="noreferrer"
-                className="grid h-8 w-8 place-items-center rounded-full border border-current/10 bg-background/90 text-shop-muted backdrop-blur-sm transition-all hover:scale-105 hover:border-[#E1306C]/40 hover:text-[#E1306C] sm:h-9 sm:w-9">
-                <Instagram className="h-3.5 w-3.5" />
+              <a
+                href={shop.instagram}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Instagram"
+                className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-xl border border-border/80 bg-background/95 text-foreground shadow-sm backdrop-blur transition-all hover:scale-105 hover:border-[#E1306C]/50 hover:text-[#E1306C]"
+              >
+                <Instagram className="h-4 w-4" />
               </a>
             )}
             {shop.facebook && (
-              <a href={shop.facebook} target="_blank" rel="noreferrer"
-                className="grid h-8 w-8 place-items-center rounded-full border border-current/10 bg-background/90 text-shop-muted backdrop-blur-sm transition-all hover:scale-105 hover:border-[#1877F2]/40 hover:text-[#1877F2] sm:h-9 sm:w-9">
-                <Facebook className="h-3.5 w-3.5" />
+              <a
+                href={shop.facebook}
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Facebook"
+                className="grid h-9 w-9 sm:h-10 sm:w-10 place-items-center rounded-xl border border-border/80 bg-background/95 text-foreground shadow-sm backdrop-blur transition-all hover:scale-105 hover:border-[#1877F2]/50 hover:text-[#1877F2]"
+              >
+                <Facebook className="h-4 w-4" />
               </a>
             )}
             {hasWhatsapp && (
               <a
                 href={`https://wa.me/${shop.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`Bonjour ${shop.name}, je vous contacte depuis votre boutique MarketNet.`)}`}
-                target="_blank" rel="noreferrer"
-                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-[#25D366] px-3 text-xs font-bold text-white shadow-lg transition-all hover:brightness-95 hover:scale-105 active:scale-[.97] sm:h-10 sm:px-4 sm:text-sm"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-9 sm:h-10 items-center gap-1.5 sm:gap-2 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] px-3.5 sm:px-4 text-xs sm:text-sm font-bold text-white shadow-md shadow-emerald-600/20 transition-all hover:scale-105 active:scale-95"
               >
-                <MessageCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <MessageCircle className="h-4 w-4" />
                 <span>Contacter</span>
               </a>
             )}
           </div>
         </div>
 
-        {/* Shop info */}
-        <div className="mt-3">
-          {shop.category && (
-            <span className="inline-flex items-center rounded-full bg-shop/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-shop">
-              {shop.category}
+        {/* Détails de la boutique */}
+        <div className="mt-3.5 space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {shop.category && (
+              <span className="inline-flex items-center rounded-lg bg-primary/10 text-primary px-2.5 py-0.5 text-[11px] font-bold tracking-wide uppercase">
+                {shop.category}
+              </span>
+            )}
+            {/* Statut ouvert */}
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-[11px] font-semibold">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Ouvert
             </span>
-          )}
+          </div>
+
           <h1 className={cn(
-            "font-shop-heading font-extrabold tracking-tight",
-            compact ? "mt-1 text-xl" : "mt-1.5 text-2xl sm:text-3xl"
+            "font-shop-heading font-extrabold tracking-tight text-foreground",
+            compact ? "text-lg sm:text-xl" : "text-xl sm:text-2xl lg:text-3xl"
           )}>
             {shop.name}
           </h1>
+
           {shop.description && (
-            <p className="mt-1 max-w-xl text-sm leading-relaxed text-shop-muted">{shop.description}</p>
+            <p className="max-w-2xl text-xs sm:text-sm leading-relaxed text-muted-foreground pt-0.5">
+              {shop.description}
+            </p>
           )}
         </div>
 
-        {/* Meta: city + hours */}
+        {/* Méta-données (Localisation & Horaires) */}
         {(shop.city || shop.hours) && (
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
             {shop.city && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-shop-muted">
-                <MapPin className="h-3.5 w-3.5 text-shop/70" />{shop.city}
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                {shop.city}
               </span>
             )}
             {shop.hours && (
-              <span className="inline-flex items-center gap-1.5 text-xs text-shop-muted">
-                <Clock className="h-3.5 w-3.5 text-shop/70" />{shop.hours}
+              <span className="inline-flex items-center gap-1.5 font-medium">
+                <Clock className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-none">{shop.hours}</span>
               </span>
             )}
           </div>
         )}
 
-        <div className="mt-4 h-px bg-current/5" />
+        <div className="mt-4 h-px bg-border/60" />
       </div>
     </header>
   );

@@ -4,7 +4,7 @@ import {
   Check, MessageCircle, Palette, Smartphone, Store, Zap, ArrowRight,
   TrendingUp, Users, ShieldCheck, Menu, X, Sparkles, Layers, DollarSign,
   LogIn, Tag, Megaphone, BarChart3, Globe2, BadgePercent, Star, Clock,
-  Facebook, Instagram, Share2, Target, Rocket, Gift,
+  Facebook, Instagram, Share2, Gift, Rocket,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -52,17 +52,80 @@ const PROMO_FEATURES = [
 const META_FEATURES = [
   { icon: Facebook, color: "text-[#1877F2]", title: "Facebook Catalog", desc: "Synchronisez automatiquement vos produits avec votre catalogue Facebook pour vendre directement sur Marketplace." },
   { icon: Instagram, color: "text-[#E1306C]", title: "Instagram Shopping", desc: "Taguez vos produits dans vos posts Instagram. Vos abonnés achètent sans quitter l'application." },
-  { icon: Target, color: "text-[#FF6B35]", title: "Publicités ciblées", desc: "Utilisez le catalogue synchronisé pour créer des publicités dynamiques sur Facebook et Instagram." },
-  { icon: Rocket, color: "text-primary", title: "Boost automatique", desc: "Chaque nouveau produit est automatiquement prêt à être boosté sur Meta dès sa création." },
+  { icon: Share2, color: "text-primary", title: "Partage multi-plateformes", desc: "Partagez votre catalogue directement sur vos pages Facebook et Instagram en quelques secondes." },
+  { icon: BarChart3, color: "text-cyan-500", title: "Suivi des performances", desc: "Visualisez combien de visiteurs viennent de Facebook ou Instagram dans vos statistiques." },
 ];
 
-function FadeIn({ children, className }: { children: React.ReactNode; className?: string }) {
+function ScrollReveal({
+  children,
+  className,
+  delay = 0,
+  direction = "up",
+}: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  direction?: "up" | "down" | "left" | "right" | "none";
+}) {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    // Si déjà dans le viewport au montage (ex: Hero en haut de page), affichage direct
+    const rect = el.getBoundingClientRect();
+    if (rect.top < window.innerHeight - 30) {
+      setIsVisible(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const getOffset = () => {
+    switch (direction) {
+      case "up": return "translate-y-7";
+      case "down": return "-translate-y-7";
+      case "left": return "-translate-x-7";
+      case "right": return "translate-x-7";
+      case "none": return "scale-95";
+    }
+  };
+
   return (
-    <div className={cn("animate-in fade-in slide-in-from-bottom-6 duration-1000 fill-mode-both", className)}>
+    <div
+      ref={ref}
+      style={{
+        transitionDelay: `${delay}ms`,
+        transitionDuration: "700ms",
+      }}
+      className={cn(
+        "transition-all ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[transform,opacity]",
+        isVisible
+          ? "opacity-100 translate-x-0 translate-y-0 scale-100"
+          : cn("opacity-0", getOffset()),
+        className
+      )}
+    >
       {children}
     </div>
   );
 }
+
+const FadeIn = ScrollReveal;
 
 function CountUp({ end, suffix = "", prefix = "", duration = 2000 }: { end: number; suffix?: string; prefix?: string; duration?: number }) {
   const [count, setCount] = useState(0);
@@ -116,11 +179,8 @@ function Index() {
     queryKey: ["plans-public"],
     queryFn: async () => {
       const { data } = await supabase.from("plans").select("*").eq("active", true).order("position");
-      if (data && data.length > 0) return data;
-      return [
-        { id: "free", name: "Gratuit", price_usd: 0, max_products: 50, max_photos: 3, advanced_themes: false, advanced_stats: false, meta_access: false, active: true, position: 1 },
-        { id: "pro", name: "Premium", price_usd: 5, max_products: null, max_photos: 10, advanced_themes: true, advanced_stats: true, meta_access: true, active: true, position: 2 },
-      ];
+      // Seulement les vrais plans de la base de données
+      return data && data.length > 0 ? data : null;
     },
   });
 
@@ -273,31 +333,67 @@ function Index() {
               </FadeIn>
             </div>
 
-            <FadeIn className="delay-500 relative mx-auto w-full max-w-[280px] sm:max-w-lg lg:max-w-none">
-              <div className="relative aspect-[4/3] w-full overflow-hidden rounded-[2rem] border bg-gradient-to-br from-primary/10 to-blue-500/10 shadow-2xl lg:aspect-square">
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="grid grid-cols-2 gap-4 p-8 w-full">
-                    {[
-                      { icon: Store, label: "Boutique", color: "bg-primary/10 text-primary" },
-                      { icon: MessageCircle, label: "WhatsApp", color: "bg-green-500/10 text-green-500" },
-                      { icon: BadgePercent, label: "Promos", color: "bg-rose-500/10 text-rose-500" },
-                      { icon: Facebook, label: "Meta", color: "bg-blue-500/10 text-blue-500" },
-                    ].map(({ icon: Icon, label, color }) => (
-                      <div key={label} className={cn("flex flex-col items-center gap-2 rounded-2xl p-4 border bg-card/80 backdrop-blur-sm shadow-sm", color.split(" ")[0].replace("text-", "border-").replace("/10", "/20"))}>
-                        <div className={cn("rounded-xl p-3", color.split(" ")[0])}>
-                          <Icon className={cn("h-7 w-7", color.split(" ")[1])} />
-                        </div>
-                        <span className="text-xs font-bold text-foreground">{label}</span>
-                      </div>
-                    ))}
+            <FadeIn className="delay-500 relative mx-auto w-full max-w-[300px] sm:max-w-sm lg:max-w-xs xl:max-w-sm">
+              {/* Phone mockup */}
+              <div className="relative rounded-[2.5rem] border-4 border-foreground/10 bg-background shadow-2xl overflow-hidden">
+                {/* Status bar */}
+                <div className="bg-muted/60 px-6 pt-3 pb-2 flex items-center justify-between">
+                  <span className="text-[10px] font-semibold text-muted-foreground">9:41</span>
+                  <div className="flex items-center gap-1">
+                    <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                    <div className="h-1.5 w-3 rounded-full bg-muted-foreground/60" />
+                    <div className="h-1.5 w-4 rounded-full bg-foreground/80" />
                   </div>
                 </div>
+                {/* App bar */}
+                <div className="bg-primary px-4 py-3 flex items-center gap-3">
+                  <div className="h-8 w-8 rounded-xl bg-white/20 flex items-center justify-center font-black text-white text-sm">M</div>
+                  <div>
+                    <p className="text-white font-bold text-xs">MarketNet</p>
+                    <p className="text-white/60 text-[10px]">Boutique Awa Mode</p>
+                  </div>
+                  <div className="ml-auto h-6 w-6 rounded-full bg-white/10 flex items-center justify-center">
+                    <MessageCircle className="h-3 w-3 text-white" />
+                  </div>
+                </div>
+                {/* Products */}
+                <div className="p-3 space-y-2 bg-background">
+                  {[
+                    { name: "Robe Wax Ankara", price: "25 000 FC", badge: "-20%", color: "from-amber-400/30 to-orange-300/30" },
+                    { name: "Sac Cuir Premium", price: "45 000 FC", badge: null, color: "from-purple-400/30 to-pink-300/30" },
+                    { name: "Sandales Été", price: "18 000 FC", badge: "-10%", color: "from-teal-400/30 to-cyan-300/30" },
+                  ].map((item) => (
+                    <div key={item.name} className="flex items-center gap-2.5 rounded-xl border bg-card p-2.5 shadow-sm">
+                      <div className={cn("h-11 w-11 rounded-xl bg-gradient-to-br shrink-0", item.color)} />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-xs font-semibold truncate">{item.name}</p>
+                          {item.badge && (
+                            <span className="shrink-0 rounded-full bg-rose-500 px-1.5 py-px text-[9px] font-black text-white">{item.badge}</span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{item.price}</p>
+                      </div>
+                      <div className="h-7 w-7 rounded-full bg-green-500 flex items-center justify-center shrink-0">
+                        <MessageCircle className="h-3.5 w-3.5 text-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Bottom bar */}
+                <div className="bg-muted/40 px-4 py-2.5 flex items-center justify-center gap-1">
+                  <span className="text-[10px] text-muted-foreground font-medium">Boutique propulsée par</span>
+                  <span className="text-[10px] font-black text-primary">MarketNet</span>
+                </div>
               </div>
-              <div className="absolute -left-4 top-1/4 sm:-left-6 rounded-full bg-white p-2.5 sm:p-3 shadow-xl dark:bg-zinc-800 animate-[bounce_3s_infinite]">
-                <MessageCircle className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
+              {/* Floating badges */}
+              <div className="absolute -left-5 top-1/4 rounded-2xl bg-white dark:bg-zinc-800 border px-3 py-2 shadow-xl flex items-center gap-2 animate-[bounce_3s_infinite]">
+                <MessageCircle className="h-4 w-4 text-green-500" />
+                <span className="text-xs font-bold">Commande reçue !</span>
               </div>
-              <div className="absolute -right-4 bottom-1/4 sm:-right-6 rounded-full bg-white p-2.5 sm:p-3 shadow-xl dark:bg-zinc-800 animate-[bounce_3.5s_infinite]">
-                <BadgePercent className="h-6 w-6 sm:h-8 sm:w-8 text-rose-500" />
+              <div className="absolute -right-5 bottom-1/4 rounded-2xl bg-white dark:bg-zinc-800 border px-3 py-2 shadow-xl flex items-center gap-2 animate-[bounce_3.5s_infinite]">
+                <BadgePercent className="h-4 w-4 text-rose-500" />
+                <span className="text-xs font-bold">Promo active</span>
               </div>
             </FadeIn>
           </div>
@@ -314,7 +410,7 @@ function Index() {
               { icon: MessageCircle, color: "text-green-500 bg-green-500/10", end: 10, suffix: "k+", label: "Commandes WhatsApp" },
               { icon: Zap, color: "text-amber-500 bg-amber-500/10", end: 99, suffix: "%", label: "Disponibilité" },
             ].map(({ icon: Icon, color, end, suffix, prefix, label }, i) => (
-              <div key={label} className={cn("animate-in fade-in zoom-in duration-1000 fill-mode-both", `delay-${(i + 1) * 100}`)}>
+              <ScrollReveal key={label} delay={i * 80} direction="up">
                 <div className={cn("mx-auto grid h-12 w-12 place-items-center rounded-2xl mb-3", color)}>
                   <Icon className="h-6 w-6" />
                 </div>
@@ -322,7 +418,7 @@ function Index() {
                   <CountUp end={end} suffix={suffix} prefix={prefix} />
                 </h4>
                 <p className="mt-1 text-sm font-medium text-muted-foreground">{label}</p>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -331,17 +427,17 @@ function Index() {
       {/* ── FEATURES ── */}
       <section id="features" className="py-24 scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
+          <ScrollReveal className="text-center" direction="up">
             <SectionBadge><Sparkles className="h-3.5 w-3.5" /> Fonctionnalités</SectionBadge>
             <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Tout ce dont vous avez besoin</h2>
             <p className="mt-4 text-lg text-muted-foreground max-w-2xl mx-auto">
               MarketNet a été pensé spécifiquement pour les réalités du commerce en Afrique francophone.
             </p>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-16 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {FEATURES.map((f, i) => (
-              <div key={f.title} className={cn("animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both", `delay-${(i + 1) * 75}`)}>
+              <ScrollReveal key={f.title} delay={i * 60} direction="up">
                 <div className="group relative h-full overflow-hidden rounded-3xl border bg-card p-7 shadow-sm transition-all hover:shadow-xl hover:-translate-y-1.5 hover:border-primary/20">
                   <div className="absolute -right-4 -top-4 h-20 w-20 rounded-full bg-primary/4 transition-transform group-hover:scale-[2]" />
                   <div className={cn("flex h-11 w-11 items-center justify-center rounded-2xl mb-5", f.bg)}>
@@ -350,7 +446,7 @@ function Index() {
                   <h3 className="text-base font-bold">{f.title}</h3>
                   <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{f.text}</p>
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -361,7 +457,7 @@ function Index() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
             {/* Left text */}
-            <div className="animate-in fade-in slide-in-from-left-8 duration-1000 fill-mode-both">
+            <ScrollReveal direction="left">
               <SectionBadge><BadgePercent className="h-3.5 w-3.5 text-rose-500" /> Promotions</SectionBadge>
               <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
                 Boostez vos ventes avec des{" "}
@@ -373,15 +469,17 @@ function Index() {
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 {PROMO_FEATURES.map((pf, i) => (
-                  <div key={pf.title} className={cn("flex items-start gap-3 rounded-2xl border bg-card p-4 shadow-sm animate-in fade-in slide-in-from-bottom-4 duration-700 fill-mode-both", `delay-${(i + 1) * 100}`)}>
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
-                      <pf.icon className="h-4 w-4 text-rose-500" />
+                  <ScrollReveal key={pf.title} delay={i * 80} direction="up">
+                    <div className="flex items-start gap-3 rounded-2xl border bg-card p-4 shadow-sm h-full">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
+                        <pf.icon className="h-4 w-4 text-rose-500" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold">{pf.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{pf.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-bold">{pf.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{pf.desc}</p>
-                    </div>
-                  </div>
+                  </ScrollReveal>
                 ))}
               </div>
 
@@ -392,10 +490,10 @@ function Index() {
                   </Link>
                 </Button>
               </div>
-            </div>
+            </ScrollReveal>
 
             {/* Right visual */}
-            <div className="animate-in fade-in slide-in-from-right-8 duration-1000 delay-200 fill-mode-both">
+            <ScrollReveal direction="right" delay={150}>
               <div className="relative mx-auto max-w-sm">
                 <div className="rounded-3xl border bg-card shadow-2xl overflow-hidden">
                   {/* Mock store header */}
@@ -447,7 +545,7 @@ function Index() {
                   -30%
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -457,7 +555,7 @@ function Index() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid gap-16 lg:grid-cols-2 lg:items-center">
             {/* Left visual */}
-            <div className="order-2 lg:order-1 animate-in fade-in slide-in-from-left-8 duration-1000 delay-200 fill-mode-both">
+            <ScrollReveal direction="left" delay={120} className="order-2 lg:order-1">
               <div className="relative mx-auto max-w-sm">
                 <div className="rounded-3xl border bg-card shadow-2xl p-6 space-y-4">
                   <div className="flex items-center gap-3 pb-3 border-b">
@@ -518,10 +616,10 @@ function Index() {
                   <span className="text-xs font-bold">+85 clics</span>
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
 
             {/* Right text */}
-            <div className="order-1 lg:order-2 animate-in fade-in slide-in-from-right-8 duration-1000 fill-mode-both">
+            <ScrollReveal direction="right" className="order-1 lg:order-2">
               <SectionBadge>
                 <Facebook className="h-3.5 w-3.5 text-[#1877F2]" />
                 <Instagram className="h-3.5 w-3.5 text-[#E1306C]" />
@@ -539,15 +637,17 @@ function Index() {
 
               <div className="mt-8 space-y-4">
                 {META_FEATURES.map((mf, i) => (
-                  <div key={mf.title} className={cn("flex items-start gap-4 rounded-2xl border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/20 animate-in fade-in slide-in-from-right-4 duration-700 fill-mode-both", `delay-${(i + 1) * 100}`)}>
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
-                      <mf.icon className={cn("h-5 w-5", mf.color)} />
+                  <ScrollReveal key={mf.title} delay={i * 80} direction="up">
+                    <div className="flex items-start gap-4 rounded-2xl border bg-card p-4 shadow-sm transition-all hover:shadow-md hover:border-primary/20">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-muted">
+                        <mf.icon className={cn("h-5 w-5", mf.color)} />
+                      </div>
+                      <div>
+                        <p className="font-bold text-sm">{mf.title}</p>
+                        <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{mf.desc}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-sm">{mf.title}</p>
-                      <p className="mt-0.5 text-xs text-muted-foreground leading-relaxed">{mf.desc}</p>
-                    </div>
-                  </div>
+                  </ScrollReveal>
                 ))}
               </div>
 
@@ -555,7 +655,7 @@ function Index() {
                 <span className="text-sm text-muted-foreground">Disponible dans le plan</span>
                 <span className="rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-bold">Premium</span>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
         </div>
       </section>
@@ -563,15 +663,15 @@ function Index() {
       {/* ── HOW IT WORKS ── */}
       <section id="how-it-works" className="bg-secondary/30 py-24 scroll-mt-20">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center animate-in fade-in duration-1000 fill-mode-both">
+          <ScrollReveal direction="up" className="text-center">
             <SectionBadge><Layers className="h-3.5 w-3.5" /> Processus</SectionBadge>
             <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Comment ça marche ?</h2>
             <p className="mt-4 text-lg text-muted-foreground">Trois étapes simples pour transformer vos abonnés en clients fidèles.</p>
-          </div>
+          </ScrollReveal>
 
           <div className="mt-16 grid gap-8 lg:grid-cols-3">
             {STEPS.map((s, i) => (
-              <div key={s.title} className={cn("animate-in fade-in slide-in-from-left-4 duration-1000 fill-mode-both", `delay-${(i + 1) * 150}`)}>
+              <ScrollReveal key={s.title} delay={i * 120} direction="up">
                 <div className="relative h-full rounded-3xl bg-card p-8 shadow-sm transition-transform hover:-translate-y-1.5 border hover:border-primary/20 hover:shadow-xl">
                   <div className="flex items-center gap-4 mb-6">
                     <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground shadow-lg shadow-primary/30">
@@ -587,7 +687,7 @@ function Index() {
                     <ArrowRight className="hidden lg:block absolute -right-6 top-1/2 -translate-y-1/2 h-8 w-8 text-muted-foreground/30" />
                   )}
                 </div>
-              </div>
+              </ScrollReveal>
             ))}
           </div>
         </div>
@@ -597,15 +697,15 @@ function Index() {
       {!!plans?.length && (
         <section id="pricing" className="py-24 scroll-mt-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div className="text-center animate-in fade-in slide-in-from-bottom-8 duration-1000 fill-mode-both">
+            <ScrollReveal direction="up" className="text-center">
               <SectionBadge><DollarSign className="h-3.5 w-3.5" /> Tarifs</SectionBadge>
               <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Des tarifs transparents</h2>
               <p className="mt-4 text-lg text-muted-foreground">Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt.</p>
-            </div>
+            </ScrollReveal>
 
             <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-12 max-w-4xl mx-auto">
               {plans.map((p, i) => (
-                <div key={p.id} className={cn("animate-in fade-in slide-in-from-bottom-12 duration-1000 fill-mode-both", `delay-${(i + 1) * 100}`)}>
+                <ScrollReveal key={p.id} delay={i * 100} direction="up">
                   <div className={cn(
                     "relative flex h-full flex-col rounded-3xl border bg-card p-8",
                     p.id === "pro" ? "border-primary/50 shadow-2xl shadow-primary/10" : "shadow-sm hover:shadow-md transition-shadow"
@@ -625,14 +725,17 @@ function Index() {
                     <ul className="mt-8 flex-1 space-y-3">
                       {[
                         { show: true, text: p.max_products ? `${p.max_products} produits` : "Produits illimités", strong: true },
-                        { show: true, text: `${p.max_photos} photos par produit` },
-                        { show: true, text: "Commandes WhatsApp" },
-                        { show: true, text: "Lien boutique partageable" },
-                        { show: true, text: "Promotions & codes promo" },
+                        { show: Boolean(p.max_photos), text: `${p.max_photos} photos par produit` },
+                        { 
+                          show: true, 
+                          text: (p as any).max_active_promotions 
+                            ? `${(p as any).max_active_promotions} promotions actives max` 
+                            : "Promotions actives illimitées" 
+                        },
+                        { show: p.meta_access, text: "Accès API Meta (Facebook & Instagram)" },
                         { show: p.advanced_themes, text: "Thèmes avancés" },
-                        { show: p.advanced_stats, text: "Statistiques avancées" },
-                        { show: p.meta_access, text: "Intégration Facebook & Instagram" },
-                        { show: p.meta_access, text: "Catalogue Meta & Shopping" },
+                        { show: p.advanced_stats, text: "Statistiques Pro" },
+                        { show: true, text: "Commandes WhatsApp directes" },
                       ].filter(f => f.show).map(f => (
                         <li key={f.text} className="flex items-center gap-3">
                           <div className="rounded-full bg-primary/10 p-1 shrink-0">
@@ -646,12 +749,14 @@ function Index() {
                     <Button
                       asChild
                       className="mt-8 w-full rounded-full h-12 text-base font-bold"
-                      variant={p.id === "pro" ? "default" : "outline"}
+                      variant={p.price_usd && Number(p.price_usd) > 0 ? "default" : "outline"}
                     >
-                      <Link to="/auth" search={{ mode: "signup" }}>{p.id === "pro" ? "Devenir Premium" : "Commencer gratuitement"}</Link>
+                      <Link to="/auth" search={{ mode: "signup" }}>
+                        {Number(p.price_usd) === 0 ? "Commencer gratuitement" : `Choisir ${p.name}`}
+                      </Link>
                     </Button>
                   </div>
-                </div>
+                </ScrollReveal>
               ))}
             </div>
           </div>
@@ -661,23 +766,22 @@ function Index() {
       {/* ── CTA BOTTOM ── */}
       <section className="relative overflow-hidden bg-primary py-24 text-primary-foreground">
         <div className="absolute inset-0 opacity-10" style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "32px 32px" }} />
-        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8 relative z-10 animate-in fade-in zoom-in duration-1000 fill-mode-both">
-          <h2 className="text-4xl font-extrabold sm:text-5xl">Prêt à digitaliser vos ventes ?</h2>
-          <p className="mt-6 text-xl text-primary-foreground/80">
-            Rejoignez des centaines de commerçants qui ont déjà transformé leur business avec MarketNet.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Button size="lg" variant="secondary" className="h-14 rounded-full px-10 text-lg font-bold shadow-2xl transition-transform hover:scale-105 active:scale-95 w-full sm:w-auto" asChild>
-              <Link to="/auth" search={{ mode: "signup" }}>
-                <Store className="mr-2 h-5 w-5" />
-                Créer ma boutique maintenant
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="h-14 rounded-full px-10 text-lg font-bold border-white/30 text-white hover:bg-white/10 w-full sm:w-auto" asChild>
-              <a href="#features">Découvrir les fonctionnalités</a>
-            </Button>
-          </div>
-          <p className="mt-6 text-sm text-primary-foreground/60">Sans carte bancaire · Prêt en 5 minutes · Annulable à tout moment</p>
+        <div className="mx-auto max-w-4xl px-4 text-center sm:px-6 lg:px-8 relative z-10">
+          <ScrollReveal direction="up">
+            <h2 className="text-4xl font-extrabold sm:text-5xl">Prêt à digitaliser vos ventes ?</h2>
+            <p className="mt-6 text-xl text-primary-foreground/80">
+              Rejoignez des centaines de commerçants qui ont déjà transformé leur business avec MarketNet.
+            </p>
+            <div className="mt-10 flex justify-center">
+              <Button size="lg" variant="secondary" className="h-14 rounded-full px-10 text-lg font-bold shadow-2xl transition-transform hover:scale-105 active:scale-95" asChild>
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  <Store className="mr-2 h-5 w-5" />
+                  Créer ma boutique maintenant
+                </Link>
+              </Button>
+            </div>
+            <p className="mt-6 text-sm text-primary-foreground/60">Sans carte bancaire · Prêt en 5 minutes · Annulable à tout moment</p>
+          </ScrollReveal>
         </div>
       </section>
 
