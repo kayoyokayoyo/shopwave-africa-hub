@@ -712,6 +712,7 @@ export type Database = {
       is_promotion_public: { Args: { _promo_id: string }; Returns: boolean }
       is_shop_owner: { Args: { _shop_id: string }; Returns: boolean }
       is_shop_public: { Args: { _shop_id: string }; Returns: boolean }
+      slug_available: { Args: { _slug: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "merchant"
