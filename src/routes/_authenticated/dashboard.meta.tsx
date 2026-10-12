@@ -108,8 +108,10 @@ function MetaPage() {
     try {
       const result = await refreshFn();
       await qc.invalidateQueries({ queryKey: ["metaStatus"] });
-      if (result.errors && result.errors.length > 0) {
-        toast.error(`Statistiques incomplètes : ${result.errors![0]}`);
+      if (result.requiresReconnect) {
+        toast.error("Reconnectez-vous et acceptez toutes les autorisations pour voir vos statistiques");
+      } else if (result.errors && result.errors.length > 0) {
+        toast.error(`Statistiques incomplètes : ${result.errors[0]}`);
       } else {
         toast.success(`Statistiques actualisées (${result.updated} publication(s))`);
       }
@@ -124,7 +126,7 @@ function MetaPage() {
   // Auto-refresh stats if posts exist but stats are null (first load after publish)
   useEffect(() => {
     const s = status.data;
-    if (!s || autoRefreshed.current) return;
+    if (!s || autoRefreshed.current || s.connection?.hasPermissionIssues) return;
     if (s.posts.length > 0 && s.posts.some(p => p.reach === null) && !busy) {
       autoRefreshed.current = true;
       refreshStats();
@@ -139,10 +141,12 @@ function MetaPage() {
   if (status.error) return <p className="text-destructive">{(status.error as Error).message}</p>;
   const s = status.data!;
 
-  const totalReach = s.posts.reduce((acc, p) => acc + (p.reach ?? 0), 0);
-  const totalClicks = s.posts.reduce((acc, p) => acc + (p.clicks ?? 0), 0);
-  const hasReach = s.posts.some((p) => p.reach != null);
-  const hasClicks = s.posts.some((p) => p.clicks != null);
+  const validReachPosts = s.posts.filter((p) => p.reach != null);
+  const validClicksPosts = s.posts.filter((p) => p.clicks != null || (p.fb_visits != null && p.fb_visits > 0));
+  const totalReach = validReachPosts.reduce((acc, p) => acc + (p.reach ?? 0), 0);
+  const totalClicks = validClicksPosts.reduce((acc, p) => acc + (p.clicks ?? p.fb_visits ?? 0), 0);
+  const hasReach = validReachPosts.length > 0;
+  const hasClicks = validClicksPosts.length > 0;
   const totalPosts = s.posts.length;
   const publishedProductIds = new Set(s.posts.map((post) => post.product_id).filter(Boolean));
   const productsToPublish = (products ?? []).filter(
@@ -181,8 +185,8 @@ function MetaPage() {
             <div className="mt-6 grid grid-cols-3 gap-3 max-w-sm">
               {[
                 { icon: Send, label: "Publications", value: totalPosts },
-                { icon: Eye, label: "Vues totales", value: hasReach ? totalReach.toLocaleString("fr-FR") : "â€”" },
-                { icon: MousePointerClick, label: "Clics totaux", value: hasClicks ? totalClicks.toLocaleString("fr-FR") : "â€”" },
+                { icon: Eye, label: "Vues totales", value: hasReach ? totalReach.toLocaleString("fr-FR") : "-" },
+                { icon: MousePointerClick, label: "Clics totaux", value: hasClicks ? totalClicks.toLocaleString("fr-FR") : "-" },
               ].map(({ icon: Icon, label, value }) => (
                 <div key={label} className="rounded-2xl bg-white/15 backdrop-blur-sm p-3 text-center">
                   <Icon className="h-4 w-4 text-white/80 mx-auto mb-1" />
@@ -194,6 +198,30 @@ function MetaPage() {
           )}
         </div>
       </div>
+
+      {conn?.hasPermissionIssues && (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 rounded-3xl border border-destructive/20 bg-destructive/10 p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+            <div>
+              <h3 className="font-semibold text-destructive text-sm">Autorisations incomplètes</h3>
+              <p className="text-xs text-destructive/90 mt-1 max-w-xl">
+                Reconnectez-vous et acceptez toutes les autorisations pour voir vos statistiques.
+              </p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="destructive"
+            className="rounded-xl shrink-0"
+            onClick={connect}
+            disabled={busy}
+          >
+            <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+            Se reconnecter à Facebook
+          </Button>
+        </div>
+      )}
 
       {!s.metaAccess ? (
         <div className="rounded-3xl border bg-card p-8 text-center">
@@ -373,13 +401,23 @@ function MetaPage() {
           </section>
 
           <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-bold">Resultats des publications</h2>
-              <Button variant="outline" size="sm" className="rounded-xl" disabled={busy} onClick={refreshStats}>
-                <RefreshCw className={`h-3.5 w-3.5 ${busy ? "animate-spin" : ""}`} />Actualiser
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold">Resultats des publications</h2>
+                {conn.statsLastUpdatedAt && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Dernière mise à jour : {new Date(conn.statsLastUpdatedAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </p>
+                )}
+              </div>
+              <Button variant="outline" size="sm" className="rounded-xl" disabled={busy || conn.hasPermissionIssues} onClick={refreshStats}>
+                <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${busy ? "animate-spin" : ""}`} />Actualiser
               </Button>
             </div>
-            <p className="mb-3 text-xs text-muted-foreground flex items-center gap-1.5"><span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />Les statistiques peuvent prendre jusqu&apos;a 24h apres publication.</p>
+            <p className="mb-3 text-xs text-muted-foreground flex items-center gap-1.5">
+              <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-400 shrink-0" />
+              Les statistiques peuvent prendre jusqu&apos;à 24h après publication pour être disponibles sur Meta.
+            </p>
             {s.posts.length === 0 ? (
               <div className="rounded-3xl border border-dashed bg-muted/30 p-10 text-center">
                 <TrendingUp className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
@@ -423,15 +461,11 @@ function MetaPage() {
                         <div className="flex items-center gap-4 text-xs text-muted-foreground">
                           <span className="flex items-center gap-1">
                             <Eye className="h-3.5 w-3.5" />
-                            {p.reach == null ? (
-                              <span className="text-amber-500 font-medium">En attenteâ€¦</span>
-                            ) : p.reach.toLocaleString("fr-FR")}
+                            {p.reach == null ? "-" : p.reach.toLocaleString("fr-FR")}
                           </span>
                           <span className="flex items-center gap-1">
                             <MousePointerClick className="h-3.5 w-3.5" />
-                            {p.clicks == null ? (
-                              <span className="text-amber-500 font-medium">En attenteâ€¦</span>
-                            ) : p.clicks.toLocaleString("fr-FR")}
+                            {p.clicks == null && (!p.fb_visits || p.fb_visits === 0) ? "-" : ((p.clicks ?? 0) + (p.fb_visits ?? 0)).toLocaleString("fr-FR")}
                           </span>
                         </div>
                         {postUrl && (

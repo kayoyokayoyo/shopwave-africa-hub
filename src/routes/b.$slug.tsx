@@ -4,6 +4,8 @@ import { useEffect } from "react";
 import { ShoppingBag } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { publicShopQuery } from "@/lib/storefront.query";
+import { recordShopVisit } from "@/lib/storefront.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { CartProvider, useCart } from "@/components/store/cart";
 import { CartSheet } from "@/components/store/CartSheet";
 import { mediaUrl, shopStyle } from "@/lib/marketnet";
@@ -39,9 +41,19 @@ function ShopLayout() {
   const { slug } = Route.useParams();
   const { data } = useSuspenseQuery(publicShopQuery(slug));
   const { shop, origin } = data;
+  const visitFn = useServerFn(recordShopVisit);
+
   useEffect(() => {
     const k = `mn-view-${slug}`;
-    if (!sessionStorage.getItem(k)) { sessionStorage.setItem(k, "1"); supabase.rpc("increment_shop_view", { _slug: slug }); }
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const src = params?.get("src") ?? null;
+    const pMatch = typeof window !== "undefined" ? window.location.pathname.match(/\/p\/([0-9a-f-]{36})/i) : null;
+    const productId = pMatch ? pMatch[1] : null;
+
+    if (!sessionStorage.getItem(k) || src === "facebook") {
+      sessionStorage.setItem(k, "1");
+      visitFn({ data: { slug, src, productId } }).catch(() => null);
+    }
   }, [slug]);
   return (
     <CartProvider slug={slug}>

@@ -93,3 +93,34 @@ export const getPublicShop = createServerFn({ method: "GET" })
     try { origin = new URL(getRequest().url).origin; } catch { /* noop */ }
     return { shop, products: productsWithPromos, categories: categories ?? [], promos: publicPromos, origin };
   });
+
+export const recordShopVisit = createServerFn({ method: "POST" })
+  .validator((d) => z.object({
+    slug: z.string().min(1).max(60),
+    src: z.string().nullable().optional(),
+    productId: z.string().uuid().nullable().optional(),
+  }).parse(d))
+  .handler(async ({ data }) => {
+    const admin = (await import("@/integrations/supabase/client.server")).supabaseAdmin;
+    
+    // 1. Incrémenter la vue générale de la boutique
+    try {
+      await admin.rpc("increment_shop_view", { _slug: data.slug });
+    } catch (err) {
+      console.error("Erreur increment_shop_view:", err);
+    }
+
+    // 2. Si la visite vient de facebook (?src=facebook), enregistrer le clic
+    if (data.src === "facebook") {
+      try {
+        await admin.rpc("record_facebook_visit", {
+          _shop_slug: data.slug,
+          _product_id: data.productId ?? undefined,
+        });
+      } catch (err) {
+        console.error("Erreur record_facebook_visit:", err);
+      }
+    }
+
+    return { ok: true };
+  });

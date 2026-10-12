@@ -61,27 +61,36 @@ export type Database = {
           access_token: string | null
           connected_at: string
           ig_account_id: string | null
+          missing_permissions: string[] | null
           page_id: string | null
           page_name: string | null
+          pages_cache: Json | null
           shop_id: string
+          stats_last_updated_at: string | null
           token_expires_at: string | null
         }
         Insert: {
           access_token?: string | null
           connected_at?: string
           ig_account_id?: string | null
+          missing_permissions?: string[] | null
           page_id?: string | null
           page_name?: string | null
+          pages_cache?: Json | null
           shop_id: string
+          stats_last_updated_at?: string | null
           token_expires_at?: string | null
         }
         Update: {
           access_token?: string | null
           connected_at?: string
           ig_account_id?: string | null
+          missing_permissions?: string[] | null
           page_id?: string | null
           page_name?: string | null
+          pages_cache?: Json | null
           shop_id?: string
+          stats_last_updated_at?: string | null
           token_expires_at?: string | null
         }
         Relationships: [
@@ -99,6 +108,7 @@ export type Database = {
           clicks: number | null
           created_at: string
           external_id: string | null
+          fb_visits: number | null
           id: string
           platform: string
           product_id: string | null
@@ -109,6 +119,7 @@ export type Database = {
           clicks?: number | null
           created_at?: string
           external_id?: string | null
+          fb_visits?: number | null
           id?: string
           platform: string
           product_id?: string | null
@@ -119,6 +130,7 @@ export type Database = {
           clicks?: number | null
           created_at?: string
           external_id?: string | null
+          fb_visits?: number | null
           id?: string
           platform?: string
           product_id?: string | null
@@ -699,6 +711,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_my_account: { Args: Record<PropertyKey, never>; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -712,6 +725,10 @@ export type Database = {
       is_promotion_public: { Args: { _promo_id: string }; Returns: boolean }
       is_shop_owner: { Args: { _shop_id: string }; Returns: boolean }
       is_shop_public: { Args: { _shop_id: string }; Returns: boolean }
+      record_facebook_visit: {
+        Args: { _shop_slug: string; _product_id?: string }
+        Returns: undefined
+      }
       slug_available: { Args: { _slug: string }; Returns: boolean }
     }
     Enums: {

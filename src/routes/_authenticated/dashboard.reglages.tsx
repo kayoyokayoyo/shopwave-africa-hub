@@ -66,7 +66,7 @@ function SettingsPage() {
     setDeleting(true);
     try {
       // Suppression côté serveur : RPC qui cascade sur shops, products, orders, meta_tokens…
-      const { error } = await supabase.rpc("delete_my_account" as never);
+      const { error } = await supabase.rpc("delete_my_account");
       if (error) throw error;
     } catch {
       // Si la RPC n'existe pas encore, on déconnecte quand même

@@ -93,7 +93,7 @@ function DataDeletionPage() {
               <ol className="space-y-3 mb-5">
                 <li className="flex items-start gap-3 text-muted-foreground text-base">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold mt-0.5">1</span>
-                  <span>Connectez-vous sur <Link to="/auth" className="font-semibold text-primary underline underline-offset-4 hover:opacity-80">MarketNet</Link>.</span>
+                  <span>Connectez-vous sur <a href="/auth" className="font-semibold text-primary underline underline-offset-4 hover:opacity-80">MarketNet</a>.</span>
                 </li>
                 <li className="flex items-start gap-3 text-muted-foreground text-base">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold mt-0.5">2</span>
