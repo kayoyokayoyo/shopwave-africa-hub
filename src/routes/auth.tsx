@@ -104,7 +104,7 @@ function AuthPage() {
         {/* Card */}
         <div className="rounded-[2rem] border bg-card/95 backdrop-blur-xl p-7 sm:p-9 shadow-2xl shadow-primary/5">
           {/* Segmented Switcher (Connexion / Inscription) */}
-          {mode !== "forgot" && (
+          {!sent && mode !== "forgot" && (
             <div className="mb-8 flex rounded-2xl bg-muted/60 p-1.5 border border-border/50">
               <button
                 type="button"
@@ -134,51 +134,55 @@ function AuthPage() {
           )}
 
           {/* Titles & Headers */}
-          {mode === "forgot" ? (
-            <div className="mb-6">
-              <button
-                type="button"
-                onClick={() => setMode("login")}
-                className="mb-4 inline-flex items-center text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
-              >
-                <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Retour
-              </button>
-              <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
-                Mot de passe oublié
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                On t'envoie un lien par e-mail pour réinitialiser ton mot de passe.
-              </p>
-            </div>
-          ) : mode === "signup" ? (
-            <div className="mb-6">
-              <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
-                Crée ton compte
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                Commence à vendre avec MarketNet en quelques minutes.
-              </p>
-            </div>
-          ) : (
-            <div className="mb-6">
-              <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
-                Content de te revoir
-              </h1>
-              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-                Connecte-toi pour accéder à ton tableau de bord MarketNet.
-              </p>
-            </div>
-          )}
+          {!sent && (
+            <>
+              {mode === "forgot" ? (
+                <div className="mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setMode("login")}
+                    className="mb-4 inline-flex items-center text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    <ArrowLeft className="mr-1.5 h-3.5 w-3.5" /> Retour
+                  </button>
+                  <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
+                    Mot de passe oublié
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    On t'envoie un lien par e-mail pour réinitialiser ton mot de passe.
+                  </p>
+                </div>
+              ) : mode === "signup" ? (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
+                    Crée ton compte
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    Commence à vendre avec MarketNet en quelques minutes.
+                  </p>
+                </div>
+              ) : (
+                <div className="mb-6">
+                  <h1 className="text-2xl sm:text-[26px] font-black tracking-tight text-foreground">
+                    Content de te revoir
+                  </h1>
+                  <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                    Connecte-toi pour accéder à ton tableau de bord MarketNet.
+                  </p>
+                </div>
+              )}
 
-          {/* Divider */}
-          <div className="relative mb-6 text-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border/60" />
-            </div>
-            <span className="relative bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-              MarketNet
-            </span>
-          </div>
+              {/* Divider */}
+              <div className="relative mb-6 text-center">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/60" />
+                </div>
+                <span className="relative bg-card px-3 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                  MarketNet
+                </span>
+              </div>
+            </>
+          )}
 
           {/* Success message view */}
           {sent ? (

@@ -53,10 +53,11 @@ serve(async (req) => {
       minute: "2-digit",
     });
 
-    const smtpHost = Deno.env.get("SMTP_HOST") || "smtp.gmail.com";
+    const smtpHost = (Deno.env.get("SMTP_HOST") || "smtp.gmail.com").trim();
     const smtpPort = Number(Deno.env.get("SMTP_PORT") || "465");
-    const smtpUser = Deno.env.get("SMTP_USER");
-    const smtpPass = Deno.env.get("SMTP_PASSWORD") || Deno.env.get("SMTP_PASS");
+    const smtpUser = (Deno.env.get("SMTP_USER") || "").trim();
+    const rawPass = (Deno.env.get("SMTP_PASSWORD") || Deno.env.get("SMTP_PASS") || "").trim().replace(/['"]/g, "");
+    const smtpPass = rawPass.replace(/\s+/g, "");
     const senderName = Deno.env.get("SMTP_FROM_NAME") || "MarketNet Africa";
 
     if (!smtpUser || !smtpPass) {
