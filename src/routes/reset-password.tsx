@@ -97,12 +97,12 @@ function ResetPage() {
             </FadeIn>
           ) : (
             <>
-              <FadeIn delay={100}>
+              <FadeIn>
                 <h1 className="text-3xl font-extrabold tracking-tight">Nouveau mot de passe</h1>
                 <p className="mt-2 text-muted-foreground">Choisissez un mot de passe sécurisé pour protéger votre boutique.</p>
               </FadeIn>
 
-              <FadeIn delay={200}>
+              <FadeIn>
                 <form onSubmit={submit} className="mt-8 space-y-5">
                   {/* Nouveau mot de passe */}
                   <div className="space-y-2">
