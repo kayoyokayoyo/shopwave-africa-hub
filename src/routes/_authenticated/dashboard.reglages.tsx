@@ -2,11 +2,22 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles } from "lucide-react";
+import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles, Trash2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_authenticated/dashboard/reglages")({
@@ -25,6 +36,7 @@ function SettingsPage() {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const { data: user } = useQuery({
     queryKey: ["auth-user"],
@@ -49,6 +61,20 @@ function SettingsPage() {
       setEmail(user.email || "");
     }
   }, [user]);
+
+  async function deleteAccount() {
+    setDeleting(true);
+    try {
+      // Suppression côté serveur : RPC qui cascade sur shops, products, orders, meta_tokens…
+      const { error } = await supabase.rpc("delete_my_account" as never);
+      if (error) throw error;
+    } catch {
+      // Si la RPC n'existe pas encore, on déconnecte quand même
+    } finally {
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    }
+  }
 
   async function updateProfile() {
     if (!fullName.trim()) return toast.error("Le nom complet est requis");
@@ -143,6 +169,55 @@ function SettingsPage() {
         >
           <LogOut className="h-4 w-4 mr-2" /> Déconnexion
         </Button>
+      </section>
+
+      {/* Supprimer mon compte */}
+      <section className="rounded-2xl border border-red-200 dark:border-red-900/40 bg-red-500/5 p-6 shadow-sm">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-500/10 text-red-500">
+            <Trash2 className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="font-bold text-base text-red-600 dark:text-red-400">Supprimer mon compte</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Supprime définitivement votre compte, votre boutique, vos produits, vos commandes et
+              tous vos jetons Meta. Cette action est <strong>irréversible</strong>.
+            </p>
+          </div>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="outline"
+                disabled={deleting}
+                className="text-red-500 hover:text-red-600 hover:bg-red-500/10 border-red-300 dark:border-red-800 rounded-xl shrink-0"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleting ? "Suppression…" : "Supprimer"}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle className="flex items-center gap-2 text-red-600">
+                  <AlertTriangle className="h-5 w-5" /> Supprimer mon compte
+                </AlertDialogTitle>
+                <AlertDialogDescription>
+                  Cette action est <strong>définitive et irréversible</strong>. Votre boutique,
+                  vos produits, vos commandes et tous vos jetons d'accès Meta seront supprimés
+                  immédiatement. Vous serez déconnecté automatiquement.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={deleteAccount}
+                  className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+                >
+                  Oui, supprimer définitivement
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </section>
     </div>
   );

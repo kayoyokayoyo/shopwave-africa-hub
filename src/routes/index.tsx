@@ -375,8 +375,12 @@ function Index() {
         <div className="mx-auto max-w-7xl px-4 flex flex-col items-center justify-between gap-6 sm:flex-row sm:px-6 lg:px-8">
           <Logo />
           <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} MarketNet. Tous droits réservés.</p>
-          <div className="flex gap-4 text-sm text-muted-foreground">
-            <Link to="/terms" className="hover:text-foreground transition-colors">CGU & Confidentialité</Link>
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+            <Link to="/terms" className="hover:text-foreground transition-colors">Conditions d'utilisation</Link>
+            <span className="opacity-40">&bull;</span>
+            <Link to="/privacy" className="hover:text-foreground transition-colors">Politique de confidentialité</Link>
+            <span className="opacity-40">&bull;</span>
+            <Link to="/data-deletion" className="hover:text-foreground transition-colors">Suppression des données</Link>
           </div>
         </div>
       </footer>
