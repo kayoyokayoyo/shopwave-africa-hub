@@ -37,6 +37,7 @@ function SettingsPage() {
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [confirmText, setConfirmText] = useState("");
 
   const { data: user } = useQuery({
     queryKey: ["auth-user"],
@@ -184,7 +185,7 @@ function SettingsPage() {
               tous vos jetons Meta. Cette action est <strong>irréversible</strong>.
             </p>
           </div>
-          <AlertDialog>
+          <AlertDialog onOpenChange={(open) => { if (!open) setConfirmText(""); }}>
             <AlertDialogTrigger asChild>
               <Button
                 variant="outline"
@@ -206,13 +207,27 @@ function SettingsPage() {
                   immédiatement. Vous serez déconnecté automatiquement.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+              <div className="space-y-2 py-2">
+                <Label htmlFor="confirm-delete" className="text-xs font-medium text-foreground">
+                  Pour confirmer, tapez <span className="font-bold text-red-600 select-all tracking-wider">SUPPRIMER</span> ci-dessous :
+                </Label>
+                <Input
+                  id="confirm-delete"
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="SUPPRIMER"
+                  autoComplete="off"
+                  className="border-red-200 focus-visible:ring-red-500"
+                />
+              </div>
               <AlertDialogFooter>
-                <AlertDialogCancel>Annuler</AlertDialogCancel>
+                <AlertDialogCancel onClick={() => setConfirmText("")}>Annuler</AlertDialogCancel>
                 <AlertDialogAction
+                  disabled={confirmText.trim() !== "SUPPRIMER" || deleting}
                   onClick={deleteAccount}
-                  className="bg-red-500 hover:bg-red-600 focus:ring-red-500"
+                  className="bg-red-500 hover:bg-red-600 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Oui, supprimer définitivement
+                  {deleting ? "Suppression en cours…" : "Oui, supprimer définitivement"}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
