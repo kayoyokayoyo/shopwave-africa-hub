@@ -1,5 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": null,
-  "buildCommand": "NITRO_PRESET=vercel npm run build"
+  "buildCommand": "node scripts/deploy-prebuild.mjs && NITRO_PRESET=vercel npm run build"
 }

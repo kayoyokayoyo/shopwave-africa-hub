@@ -246,17 +246,26 @@ bun run dev
 
 `bun install` installe les dépendances définies par le projet. `bun run dev` démarre le serveur ; ouvrez l’adresse locale affichée dans le terminal. Si Bun était déjà installé, les deux premières commandes ne sont pas nécessaires.
 
-## Migrations Supabase
+## Migrations Supabase & Déploiement
 
-Les migrations de la base sont gérées exclusivement par les fichiers de `supabase/migrations`. Configurez `LOVABLE_DB_MIGRATION_URL` dans `.env` avec l’URI **Session pooler** du bon projet (port 5432), puis connectez la CLI à ce projet avec `supabase login` et `supabase link --project-ref <project-ref>`. Depuis PowerShell, à la racine du dépôt, utilisez :
+Les migrations de la base sont gérées par les fichiers de `supabase/migrations`. Configurez `LOVABLE_DB_MIGRATION_URL` (ou `SUPABASE_DB_MIGRATION_URL`) dans `.env` avec l’URI **Session pooler** du bon projet (port 5432).
 
+### En local :
+Depuis PowerShell ou votre terminal :
 ```powershell
-bun run db:status
-bun run db:dry-run
-bun run db:push
+bun run db:status    # Afficher l'état des migrations
+bun run db:dry-run   # Prévisualiser les migrations à appliquer
+bun run db:push      # Appliquer les migrations via Supabase CLI
+# ou alternativement via Node.js :
+bun run db:migrate   # Appliquer les migrations directement via le script Node.js
 ```
 
-`db:push` applique automatiquement les migrations en attente. N’utilisez pas `drizzle-kit migrate` ni le SQL Editor pour ce projet : les migrations Drizzle historiques dupliquent les fichiers Supabase.
+### Au déploiement (Vercel) :
+Lors du déploiement Vercel, la commande `buildCommand` exécute automatiquement `node scripts/deploy-prebuild.mjs` avant le build Nitro/Vite :
+1. **Migrations SQL** : toute nouvelle migration présente dans `supabase/migrations` est appliquée et enregistrée automatiquement dans `supabase_migrations.schema_migrations`.
+2. **Administrateur** : le script `create-admin.mjs` configure le compte administrateur initial (si les variables sont renseignées dans Vercel).
+
+N’utilisez pas `drizzle-kit migrate` ni le SQL Editor pour ce projet : les migrations Supabase sont la source unique de vérité.
 
 ## Médias Cloudinary
 

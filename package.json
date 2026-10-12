@@ -17,6 +17,8 @@
     "db:status": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1 -List",
     "db:dry-run": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1 -DryRun",
     "db:push": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/supabase-db.ps1",
+    "db:migrate": "node scripts/run-migrations.mjs",
+    "deploy:prebuild": "node scripts/deploy-prebuild.mjs",
     "media:migrate": "node scripts/migrate-supabase-media-to-cloudinary.mjs",
     "admin:create": "node scripts/create-admin.mjs"
   },
