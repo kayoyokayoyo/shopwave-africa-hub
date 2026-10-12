@@ -67,41 +67,38 @@ function ScrollReveal({
   delay?: number;
   direction?: "up" | "down" | "left" | "right" | "none";
 }) {
-  const [isVisible, setIsVisible] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    // Si déjà dans le viewport au montage (ex: Hero en haut de page), affichage direct
     const rect = el.getBoundingClientRect();
-    if (rect.top < window.innerHeight - 30) {
-      setIsVisible(true);
-      return;
+    // Si l'élément est plus bas que l'écran initial, on applique l'apparition au scroll
+    if (rect.top > window.innerHeight) {
+      setIsVisible(false);
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) {
+            setIsVisible(true);
+            observer.disconnect();
+          }
+        },
+        { threshold: 0.05, rootMargin: "0px 0px 50px 0px" }
+      );
+      observer.observe(el);
+      return () => observer.disconnect();
     }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.1, rootMargin: "0px 0px -30px 0px" }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
   }, []);
 
   const getOffset = () => {
     switch (direction) {
-      case "up": return "translate-y-7";
-      case "down": return "-translate-y-7";
-      case "left": return "-translate-x-7";
-      case "right": return "translate-x-7";
-      case "none": return "scale-95";
+      case "up": return "translate-y-5";
+      case "down": return "-translate-y-5";
+      case "left": return "-translate-x-5";
+      case "right": return "translate-x-5";
+      case "none": return "scale-98";
     }
   };
 
@@ -109,11 +106,11 @@ function ScrollReveal({
     <div
       ref={ref}
       style={{
-        transitionDelay: `${delay}ms`,
-        transitionDuration: "700ms",
+        transitionDelay: isVisible ? `${delay}ms` : "0ms",
+        transitionDuration: "500ms",
       }}
       className={cn(
-        "transition-all ease-[cubic-bezier(0.16,1,0.3,1)] will-change-[transform,opacity]",
+        "transition-all ease-out",
         isVisible
           ? "opacity-100 translate-x-0 translate-y-0 scale-100"
           : cn("opacity-0", getOffset()),

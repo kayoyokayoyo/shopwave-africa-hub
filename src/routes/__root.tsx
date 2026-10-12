@@ -119,20 +119,6 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <div id="root-loader" style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "3px",
-          background: "linear-gradient(90deg, #ea580c, #f97316, #3b82f6)",
-          zIndex: 99999,
-          transform: "scaleX(0)",
-          transformOrigin: "left",
-          transition: "transform 0.4s ease, opacity 0.3s ease",
-          opacity: 0,
-          pointerEvents: "none",
-        }} />
         {children}
         <Scripts />
       </body>
@@ -143,27 +129,6 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-
-  // Indicateur de chargement réel non-bloquant lors des transitions de routes et actualisations
-  const isLoading = router.state.status === "pending";
-
-  useEffect(() => {
-    const el = document.getElementById("root-loader");
-    if (!el) return;
-    if (isLoading) {
-      el.style.opacity = "1";
-      el.style.transform = "scaleX(0.7)";
-    } else {
-      el.style.transform = "scaleX(1)";
-      const timer = setTimeout(() => {
-        el.style.opacity = "0";
-        setTimeout(() => {
-          el.style.transform = "scaleX(0)";
-        }, 300);
-      }, 200);
-      return () => clearTimeout(timer);
-    }
-  }, [isLoading]);
 
   useEffect(() => {
     const { data } = supabase.auth.onAuthStateChange((event) => {
