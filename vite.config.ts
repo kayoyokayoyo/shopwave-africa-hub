@@ -17,6 +17,9 @@ const mode = process.env.NODE_ENV === "production" ? "production" : "development
     "CLOUDINARY_CLOUD_NAME",
     "CLOUDINARY_API_KEY",
     "CLOUDINARY_API_SECRET",
+    "SASPAY_ENV",
+    "SASPAY_SECRET_KEY",
+    "SASPAY_WEBHOOK_SECRET",
   ]) {
     if (!process.env[key] && env[key]) process.env[key] = env[key];
   }
