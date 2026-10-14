@@ -27,6 +27,11 @@ const mode = process.env.NODE_ENV === "production" ? "production" : "development
 }
 
 export default defineConfig({
+  vite: {
+    server: {
+      allowedHosts: true,
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     server: { entry: "server" },
