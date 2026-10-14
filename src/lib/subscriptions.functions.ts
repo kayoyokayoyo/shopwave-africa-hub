@@ -320,17 +320,64 @@ export const adminGetPayments = createServerFn({ method: "GET" })
     const sb = supabaseAdmin;
     let query = sb
       .from("subscription_payments")
-      .select("*, shops:shop_id(name, slug, owner_id, profiles:owner_id(full_name, email))")
+      .select("*, shops:shop_id(id, name, slug, owner_id)")
       .order("cree_le", { ascending: false });
 
     if (input.statut && input.statut !== "all") {
-      query = query.eq("statut", input.statut);
+      if (input.statut === "en_attente") {
+        query = query.or("statut.eq.en_attente,status.eq.pending");
+      } else if (input.statut === "payé") {
+        query = query.or("statut.eq.payé,status.eq.approved");
+      } else if (input.statut === "échoué") {
+        query = query.or("statut.eq.échoué,status.eq.rejected");
+      } else if (input.statut === "annulé") {
+        query = query.or("statut.eq.annulé");
+      } else if (input.statut === "à_vérifier") {
+        query = query.or("statut.eq.à_vérifier");
+      } else {
+        query = query.eq("statut", input.statut);
+      }
     }
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    return data ?? [];
+    const rawPayments = data ?? [];
+
+    // Récupérer les profils des commerçants
+    const ownerIds = Array.from(
+      new Set(
+        rawPayments
+          .map((p: any) => p.shops?.owner_id || p.merchant_id)
+          .filter(Boolean)
+      )
+    );
+
+    const profilesMap = new Map<string, any>();
+    if (ownerIds.length > 0) {
+      const { data: profiles } = await sb
+        .from("profiles")
+        .select("id, full_name, email, phone")
+        .in("id", ownerIds);
+      if (profiles) {
+        profiles.forEach((pr) => profilesMap.set(pr.id, pr));
+      }
+    }
+
+    return rawPayments.map((p: any) => {
+      const ownerId = p.shops?.owner_id || p.merchant_id;
+      const profile = ownerId ? profilesMap.get(ownerId) : null;
+      return {
+        ...p,
+        merchant_profile: profile,
+        shops: p.shops
+          ? {
+              ...p.shops,
+              profiles: profile,
+            }
+          : null,
+      };
+    });
   });
 
 export const adminReviewPayment = createServerFn({ method: "POST" })

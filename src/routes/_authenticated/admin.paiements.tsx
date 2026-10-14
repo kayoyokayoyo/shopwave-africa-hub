@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   ShieldAlert,
   Search,
+  ExternalLink,
 } from "lucide-react";
 import {
   adminGetPayments,
@@ -185,10 +186,19 @@ function AdminPaymentsPage() {
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     const shopName = p.shops?.name?.toLowerCase() || "";
+    const merchantName = p.merchant_profile?.full_name?.toLowerCase() || "";
+    const merchantEmail = p.merchant_profile?.email?.toLowerCase() || "";
     const session = p.saspay_session_id?.toLowerCase() || "";
     const tx = p.saspay_transaction_id?.toLowerCase() || "";
     const ref = p.reference?.toLowerCase() || "";
-    return shopName.includes(s) || session.includes(s) || tx.includes(s) || ref.includes(s);
+    return (
+      shopName.includes(s) ||
+      merchantName.includes(s) ||
+      merchantEmail.includes(s) ||
+      session.includes(s) ||
+      tx.includes(s) ||
+      ref.includes(s)
+    );
   });
 
   return (
@@ -251,7 +261,7 @@ function AdminPaymentsPage() {
             <div className="relative min-w-[240px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Rechercher boutique, réf, session…"
+                placeholder="Rechercher boutique, commerçant, réf, session…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 h-10 rounded-xl"
@@ -260,7 +270,23 @@ function AdminPaymentsPage() {
           </div>
 
           {/* Payments list */}
-          {paymentsQuery.isLoading ? (
+          {paymentsQuery.isError ? (
+            <div className="p-8 text-center border-2 border-red-500/20 rounded-3xl bg-red-500/10 text-red-600 dark:text-red-400 space-y-3">
+              <ShieldAlert className="h-8 w-8 mx-auto" />
+              <p className="font-bold text-base">Erreur lors du chargement des paiements</p>
+              <p className="text-xs max-w-md mx-auto">
+                {(paymentsQuery.error as any)?.message || "Impossible de contacter le serveur"}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => paymentsQuery.refetch()}
+                className="rounded-xl"
+              >
+                Réessayer
+              </Button>
+            </div>
+          ) : paymentsQuery.isLoading ? (
             <div className="p-12 text-center rounded-2xl border bg-card text-muted-foreground animate-pulse">
               Chargement des paiements…
             </div>
@@ -273,9 +299,18 @@ function AdminPaymentsPage() {
           ) : (
             <div className="grid gap-3">
               {paymentsList.map((p: any) => {
-                const effectiveStatut = p.statut || (p.status === "approved" ? "payé" : p.status === "rejected" ? "échoué" : "en_attente");
+                const effectiveStatut =
+                  p.statut ||
+                  (p.status === "approved"
+                    ? "payé"
+                    : p.status === "rejected"
+                    ? "échoué"
+                    : "en_attente");
                 const amountUSD = p.montant_usd ?? p.montant_cdf ?? (p.amount || 0);
-                const isActionable = effectiveStatut === "à_vérifier" || effectiveStatut === "en_attente" || p.methode === "manuel";
+                const isActionable =
+                  effectiveStatut === "à_vérifier" ||
+                  effectiveStatut === "en_attente" ||
+                  p.methode === "manuel";
 
                 return (
                   <div
@@ -287,6 +322,11 @@ function AdminPaymentsPage() {
                         <span className="font-bold text-base truncate">
                           {p.shops?.name || "Boutique"}
                         </span>
+                        {p.merchant_profile?.full_name && (
+                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                            ({p.merchant_profile.full_name})
+                          </span>
+                        )}
                         <span className="text-xs text-muted-foreground">·</span>
                         <span className="font-bold text-xs uppercase px-2 py-0.5 rounded-md bg-muted">
                           Plan {p.plan_id} ({p.period || `${p.months || 1} mois`})
@@ -306,7 +346,9 @@ function AdminPaymentsPage() {
                           {formatUSD(amountUSD)}
                         </span>
                         <span>•</span>
-                        <span className="capitalize">Méthode : {p.methode || p.method || "saspay"}</span>
+                        <span className="capitalize">
+                          Méthode : {p.methode || p.method || "saspay"}
+                        </span>
                         <span>•</span>
                         <span>
                           {new Date(p.cree_le || p.created_at).toLocaleDateString("fr-FR", {
@@ -317,6 +359,14 @@ function AdminPaymentsPage() {
                             minute: "2-digit",
                           })}
                         </span>
+                        {p.merchant_profile?.email && (
+                          <>
+                            <span>•</span>
+                            <span className="truncate max-w-[180px]">
+                              {p.merchant_profile.email}
+                            </span>
+                          </>
+                        )}
                       </div>
 
                       {p.admin_note && (
@@ -457,12 +507,27 @@ function AdminPaymentsPage() {
                 <div>
                   <span className="text-muted-foreground">Boutique</span>
                   <p className="font-bold text-sm text-foreground">{selectedPayment.shops?.name || "N/A"}</p>
+                  {selectedPayment.merchant_profile && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">
+                      <p className="font-medium text-foreground">{selectedPayment.merchant_profile.full_name}</p>
+                      <p>{selectedPayment.merchant_profile.email}</p>
+                      {selectedPayment.merchant_profile.phone && <p>{selectedPayment.merchant_profile.phone}</p>}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <span className="text-muted-foreground">Plan demandé</span>
                   <p className="font-bold text-sm text-foreground uppercase">
                     {selectedPayment.plan_id} ({selectedPayment.period || "mensuel"})
                   </p>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Créé le : {new Date(selectedPayment.cree_le || selectedPayment.created_at).toLocaleString("fr-FR")}
+                  </p>
+                  {selectedPayment.paye_le && (
+                    <p className="text-[11px] text-emerald-600 font-medium">
+                      Payé le : {new Date(selectedPayment.paye_le).toLocaleString("fr-FR")}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -495,6 +560,19 @@ function AdminPaymentsPage() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Transaction ID :</span>
                     <span className="font-mono text-[11px] truncate max-w-[240px]">{selectedPayment.saspay_transaction_id}</span>
+                  </div>
+                )}
+                {selectedPayment.checkout_url && (
+                  <div className="flex justify-between items-center pt-1 border-t">
+                    <span className="text-muted-foreground">Page SasPay :</span>
+                    <a
+                      href={selectedPayment.checkout_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline font-semibold flex items-center gap-1 text-[11px]"
+                    >
+                      Ouvrir la session <ExternalLink className="h-3 w-3" />
+                    </a>
                   </div>
                 )}
                 {selectedPayment.frais != null && (
