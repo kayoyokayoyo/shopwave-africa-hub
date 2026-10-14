@@ -7,11 +7,46 @@ import { StoreHeader, ProductCard } from "@/components/store/StoreParts";
 import { PromoBanner, type PublicPromo } from "@/components/promo/PromoBanner";
 import { useCart } from "@/components/store/cart";
 import { cn } from "@/lib/utils";
-import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
+import { absoluteMediaUrl, formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 
 export const Route = createFileRoute("/b/$slug/")({
+  loader: ({ context, params }: any) => context.queryClient.ensureQueryData(publicShopQuery(params.slug)),
+  head: ({ loaderData }: any) => {
+    if (!loaderData) return {};
+    const { shop, origin } = loaderData;
+    const title = `${shop.name} — Boutique en ligne`;
+    const desc = shop.description?.slice(0, 160) || `Découvrez les produits de ${shop.name} et commandez directement sur WhatsApp.`;
+    const shopUrl = `${origin}/b/${shop.slug}`;
+    // Bannière > Logo comme couverture quand on partage la boutique
+    const coverPath = shop.banner_url || shop.logo_url;
+    const ogImage = absoluteMediaUrl(coverPath, origin);
+
+    const meta: Record<string, string>[] = [
+      { title },
+      { name: "description", content: desc },
+      { property: "og:site_name", content: "MarketNet" },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: shopUrl },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: desc },
+    ];
+
+    if (ogImage) {
+      meta.push(
+        { property: "og:image", content: ogImage },
+        { property: "og:image:alt", content: `Boutique ${shop.name}` },
+        { name: "twitter:image", content: ogImage },
+      );
+    }
+
+    return { meta };
+  },
   component: ShopHome,
 });
+
 
 function ShopHome() {
   const { slug } = Route.useParams();

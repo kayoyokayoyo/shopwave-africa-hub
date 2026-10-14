@@ -8,39 +8,17 @@ import { recordShopVisit } from "@/lib/storefront.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { CartProvider, useCart } from "@/components/store/cart";
 import { CartSheet } from "@/components/store/CartSheet";
-import { absoluteMediaUrl, mediaUrl, shopStyle } from "@/lib/marketnet";
+import { mediaUrl, shopStyle } from "@/lib/marketnet";
 
 export const Route = createFileRoute("/b/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(publicShopQuery(params.slug)),
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: "Boutique introuvable — MarketNet" }, { name: "robots", content: "noindex" }] };
-    const { shop, origin } = loaderData;
-    const title = `${shop.name} — Boutique en ligne`;
-    const desc = shop.description?.slice(0, 160) || `Découvrez les produits de ${shop.name} et commandez directement sur WhatsApp.`;
-    // Priorité : bannière > logo > rien
-    const coverPath = shop.banner_url || shop.logo_url;
-    const ogImage = absoluteMediaUrl(coverPath, origin);
-    const shopUrl = `${origin}/b/${shop.slug}`;
-    const meta = [
-      { title },
-      { name: "description", content: desc },
-      { property: "og:site_name", content: "MarketNet" },
-      { property: "og:title", content: title },
-      { property: "og:description", content: desc },
-      { property: "og:type", content: "website" },
-      { property: "og:url", content: shopUrl },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: title },
-      { name: "twitter:description", content: desc },
-    ];
-    if (ogImage) {
-      meta.push(
-        { property: "og:image", content: ogImage },
-        { property: "og:image:alt", content: `Logo de ${shop.name}` },
-        { name: "twitter:image", content: ogImage },
-      );
-    }
-    return { meta };
+    return {
+      meta: [
+        { property: "og:site_name", content: "MarketNet" },
+      ],
+    };
   },
   component: ShopLayout,
   notFoundComponent: () => (

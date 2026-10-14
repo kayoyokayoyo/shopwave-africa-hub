@@ -443,9 +443,7 @@ function PromotionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const link = p.products.length > 1
-                        ? `${window.location.origin}/b/${shop.slug}/promo/${p.id}?src=share`
-                        : `${window.location.origin}/b/${shop.slug}?promo=${p.id}&src=share`;
+                      const link = `${window.location.origin}/b/${shop.slug}/promo/${p.id}?src=share`;
                       navigator.clipboard.writeText(link);
                       toast.success("Lien de la promotion copié !");
                     }}
@@ -458,10 +456,10 @@ function PromotionsPage() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const link = p.products.length > 1
-                        ? `${window.location.origin}/b/${shop.slug}/promo/${p.id}?src=share`
-                        : `${window.location.origin}/b/${shop.slug}?promo=${p.id}&src=share`;
-                      const text = `Découvrez notre offre « ${p.title} » sur ${shop.name} : ${link}`;
+                      const link = `${window.location.origin}/b/${shop.slug}/promo/${p.id}?src=share`;
+                      const disc = discountLabel(p.discount_type, p.discount_value, shop.currency);
+                      const discText = disc ? ` (${disc})` : "";
+                      const text = `🔥 Offre exclusive : « ${p.title} »${discText} sur ${shop.name} !\n👉 Cliquez ici pour en profiter : ${link}`;
                       window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
                     }}
                     className="rounded-xl h-8 px-2.5 text-xs gap-1 text-emerald-600 border-emerald-500/25 hover:bg-emerald-500/10 dark:text-emerald-400"

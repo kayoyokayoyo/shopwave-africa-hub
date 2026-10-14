@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowLeft, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle, Share2, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
 import { publicShopQuery } from "@/lib/storefront.query";
 import { StoreHeader, ProductCard } from "@/components/store/StoreParts";
 import { PromoSlide } from "@/components/promo/PromoSlide";
@@ -14,27 +15,47 @@ export const Route = createFileRoute("/b/$slug/promo/$promoId")({
   loader: async ({ context, params }) => {
     const d = await context.queryClient.ensureQueryData(publicShopQuery(params.slug));
     const promo = (d.promos ?? []).find((p: any) => p.id === params.promoId) ?? null;
-    return { shop: d.shop, promo, origin: d.origin };
+    let promoProductImage: string | null = null;
+    if (promo && Array.isArray(promo.product_ids) && promo.product_ids.length > 0) {
+      const firstProd = (d.products ?? []).find((prod: any) => promo.product_ids.includes(prod.id));
+      if (firstProd && Array.isArray(firstProd.images) && firstProd.images[0]) {
+        promoProductImage = firstProd.images[0];
+      }
+    }
+    return { shop: d.shop, promo, origin: d.origin, promoProductImage };
   },
   head: ({ loaderData }) => {
     if (!loaderData) return { meta: [{ title: "Promotion — MarketNet" }] };
-    const { shop, promo, origin } = loaderData;
+    const { shop, promo, origin, promoProductImage } = loaderData;
 
+    // Calcul badge et réduction pour un titre très vendeur
+    let discountStr = "";
+    if (promo?.discount_type === "percent" && promo.discount_value) {
+      discountStr = ` (-${promo.discount_value}%)`;
+    } else if (promo?.discount_type === "fixed" && promo.discount_value) {
+      discountStr = ` (-${formatPrice(Number(promo.discount_value), shop.currency)})`;
+    }
+
+    const badgeStr = promo?.badge_label ? `[${promo.badge_label.trim()}] ` : "";
     const promoTitle = promo?.title
-      ? `${promo.title} — ${shop.name}`
-      : `Promotion exclusive chez ${shop.name}`;
-    const promoDesc = promo?.description?.slice(0, 160)
-      || `Offre spéciale disponible sur la boutique ${shop.name}. Commandez maintenant sur WhatsApp.`;
+      ? `${badgeStr}${promo.title}${discountStr} — ${shop.name}`
+      : `Offre exclusive chez ${shop.name}`;
 
-    // Priorité image : image de la promo > bannière boutique > logo boutique
-    const coverPath = promo?.image_url || shop.banner_url || shop.logo_url;
+    // Description claire et optimisée pour WhatsApp / Réseaux
+    const discountNote = discountStr ? ` Bénéficiez de ${discountStr.replace(/[()]/g, "").trim()} de réduction immédiate.` : "";
+    const promoDesc = promo?.description?.trim()
+      ? `${promo.description.trim()}${discountNote} Disponible chez ${shop.name}.`
+      : `Profitez de l'offre spéciale « ${promo?.title || "Promotion"} » sur ${shop.name}.${discountNote} Commandez vite sur WhatsApp !`;
+
+    // Priorité image : image dédiée de la promo > image du 1er produit en promo > bannière boutique > logo boutique
+    const coverPath = promo?.image_url || promoProductImage || shop.banner_url || shop.logo_url;
     const ogImage = absoluteMediaUrl(coverPath, origin);
     const promoUrl = `${origin}/b/${shop.slug}/promo/${promo?.id ?? ""}`;
 
     const meta: Record<string, string>[] = [
       { title: promoTitle },
       { name: "description", content: promoDesc },
-      { property: "og:site_name", content: "MarketNet" },
+      { property: "og:site_name", content: shop.name },
       { property: "og:title", content: promoTitle },
       { property: "og:description", content: promoDesc },
       { property: "og:type", content: "website" },
@@ -105,8 +126,8 @@ function DedicatedPromoPage() {
       <StoreHeader shop={shop} />
 
       <div className="mx-auto max-w-5xl px-4 py-4 space-y-6">
-        {/* Navigation retour boutique */}
-        <div>
+        {/* Navigation retour boutique & Partage */}
+        <div className="flex items-center justify-between gap-2">
           <Link
             to="/b/$slug"
             params={{ slug }}
@@ -114,6 +135,39 @@ function DedicatedPromoPage() {
           >
             <ArrowLeft className="h-4 w-4" /> Voir toute la boutique
           </Link>
+
+          {promo && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const url = window.location.href;
+                  if (navigator.share) {
+                    navigator.share({ title: promo.title, text: promo.description || promo.title, url }).catch(() => {});
+                  } else {
+                    navigator.clipboard.writeText(url);
+                    toast.success("Lien de la promotion copié !");
+                  }
+                }}
+                className="rounded-xl h-8 px-3 text-xs gap-1.5"
+              >
+                <Share2 className="h-3.5 w-3.5" /> Partager
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const url = window.location.href;
+                  const text = `🔥 Offre exclusive : « ${promo.title} » sur ${shop.name} !\n👉 Découvrez-la ici : ${url}`;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+                }}
+                className="rounded-xl h-8 px-3 text-xs gap-1.5 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10 dark:text-emerald-400"
+              >
+                <MessageCircle className="h-3.5 w-3.5" /> WhatsApp
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Expired alert if applicable */}
