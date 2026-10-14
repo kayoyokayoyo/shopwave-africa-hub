@@ -28,6 +28,7 @@ import { Route as AuthenticatedAdminPaiementsRouteImport } from './routes/_authe
 import { Route as AuthenticatedAdminParametresRouteImport } from './routes/_authenticated/admin.parametres'
 import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authenticated/admin.plans'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
+import { Route as AuthenticatedDashboardAbonnementRouteImport } from './routes/_authenticated/dashboard.abonnement'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
 import { Route as AuthenticatedDashboardCommandesRouteImport } from './routes/_authenticated/dashboard.commandes'
 import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authenticated/dashboard.meta'
@@ -141,6 +142,12 @@ const AuthenticatedDashboardIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardAbonnementRoute =
+  AuthenticatedDashboardAbonnementRouteImport.update({
+    id: '/abonnement',
+    path: '/abonnement',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
 const AuthenticatedDashboardBoutiqueRoute =
   AuthenticatedDashboardBoutiqueRouteImport.update({
     id: '/boutique',
@@ -232,6 +239,7 @@ export interface FileRoutesByFullPath {
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
@@ -262,6 +270,7 @@ export interface FileRoutesByTo {
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
@@ -297,6 +306,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/_authenticated/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/_authenticated/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/_authenticated/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
   '/_authenticated/dashboard/meta': typeof AuthenticatedDashboardMetaRoute
@@ -332,6 +342,7 @@ export interface FileRouteTypes {
     | '/admin/paiements'
     | '/admin/parametres'
     | '/admin/plans'
+    | '/dashboard/abonnement'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
     | '/dashboard/meta'
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | '/admin/paiements'
     | '/admin/parametres'
     | '/admin/plans'
+    | '/dashboard/abonnement'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
     | '/dashboard/meta'
@@ -396,6 +408,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/paiements'
     | '/_authenticated/admin/parametres'
     | '/_authenticated/admin/plans'
+    | '/_authenticated/dashboard/abonnement'
     | '/_authenticated/dashboard/boutique'
     | '/_authenticated/dashboard/commandes'
     | '/_authenticated/dashboard/meta'
@@ -562,6 +575,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardIndexRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/abonnement': {
+      id: '/_authenticated/dashboard/abonnement'
+      path: '/abonnement'
+      fullPath: '/dashboard/abonnement'
+      preLoaderRoute: typeof AuthenticatedDashboardAbonnementRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
     '/_authenticated/dashboard/boutique': {
       id: '/_authenticated/dashboard/boutique'
       path: '/boutique'
@@ -681,6 +701,7 @@ const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
 
 interface AuthenticatedDashboardRouteChildren {
+  AuthenticatedDashboardAbonnementRoute: typeof AuthenticatedDashboardAbonnementRoute
   AuthenticatedDashboardBoutiqueRoute: typeof AuthenticatedDashboardBoutiqueRoute
   AuthenticatedDashboardCommandesRoute: typeof AuthenticatedDashboardCommandesRoute
   AuthenticatedDashboardMetaRoute: typeof AuthenticatedDashboardMetaRoute
@@ -693,6 +714,8 @@ interface AuthenticatedDashboardRouteChildren {
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
   {
+    AuthenticatedDashboardAbonnementRoute:
+      AuthenticatedDashboardAbonnementRoute,
     AuthenticatedDashboardBoutiqueRoute: AuthenticatedDashboardBoutiqueRoute,
     AuthenticatedDashboardCommandesRoute: AuthenticatedDashboardCommandesRoute,
     AuthenticatedDashboardMetaRoute: AuthenticatedDashboardMetaRoute,

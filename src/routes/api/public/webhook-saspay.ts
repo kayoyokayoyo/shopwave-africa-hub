@@ -75,7 +75,7 @@ export const Route = createFileRoute("/api/public/webhook-saspay")({
         const { data: eventRecord, error: eventErr } = await supabaseAdmin
           .from("payment_events")
           .insert({
-            corps: parsedBody,
+            corps: parsedBody as any,
             signature_valide: verification.isValid,
             type_evenement: eventType,
             session_id: sessionId,

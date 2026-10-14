@@ -13,6 +13,7 @@ import {
   Tag,
   MoreHorizontal,
   Settings,
+  CreditCard,
   X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -105,6 +106,7 @@ function DashboardLayout() {
   const isPlusActive =
     currentPath.startsWith("/dashboard/boutique") ||
     currentPath.startsWith("/dashboard/meta") ||
+    currentPath.startsWith("/dashboard/abonnement") ||
     currentPath.startsWith("/dashboard/reglages");
 
   return (
@@ -197,6 +199,19 @@ function DashboardLayout() {
           </nav>
 
           <div className="space-y-1.5 pt-4 border-t border-sidebar-border">
+            <Link
+              to="/dashboard/abonnement"
+              className={cn(
+                "group flex shrink-0 items-center rounded-2xl text-sm text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed ? "h-12 w-12 mx-auto justify-center" : "gap-3 px-3 py-2.5"
+              )}
+              activeProps={{ className: "bg-primary/10 text-primary font-bold shadow-xs" }}
+              title={collapsed ? "Abonnement" : undefined}
+            >
+              <CreditCard className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
+              {!collapsed && <span>Abonnement</span>}
+            </Link>
+
             <Link
               to="/dashboard/reglages"
               className={cn(
@@ -438,6 +453,24 @@ function DashboardLayout() {
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
               </Link>
 
+              {/* Abonnement */}
+              <Link
+                to="/dashboard/abonnement"
+                onClick={() => setPlusOpen(false)}
+                className="flex items-center justify-between rounded-2xl border p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500">
+                    <CreditCard className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-sm">Abonnement</span>
+                    <p className="text-xs text-muted-foreground">Formule active, renouvellement, paiements</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+
               {/* Réglages */}
               <Link
                 to="/dashboard/reglages"
@@ -450,7 +483,7 @@ function DashboardLayout() {
                   </div>
                   <div>
                     <span className="font-bold text-sm">Réglages</span>
-                    <p className="text-xs text-muted-foreground">Profil, abonnement, déconnexion</p>
+                    <p className="text-xs text-muted-foreground">Profil, sécurité, déconnexion</p>
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
