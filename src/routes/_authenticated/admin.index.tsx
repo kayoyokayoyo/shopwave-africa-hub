@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Store, Package, DollarSign, ArrowRight, TrendingUp, Calendar, ChevronDown } from "lucide-react";
+import { Users, Store, Package, DollarSign, ArrowRight, TrendingUp, Calendar, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -44,16 +44,36 @@ function AdminHome() {
     queryFn: async () => {
       const [m, s, p, o] = await Promise.all([count("profiles"), count("shops"), count("products"), count("orders")]);
       
-      const { data: pays } = await supabase.from("subscription_payments").select("amount,status,created_at");
+      const { data: pays } = await supabase
+        .from("subscription_payments")
+        .select("amount,montant_debite,montant_net,status,statut,methode,method,admin_note,created_at");
+
+      // Les paiements sont "payés" si status='approved' (SasPay) OU statut='payé' (manuel admin)
+      const approvedPays = (pays ?? []).filter(
+        (x) => x.status === "approved" || x.statut === "payé"
+      );
+
+      // Priorité : montant_debite → montant_net → amount (colonnes selon la source du paiement)
+      const getAmount = (x: any) =>
+        Number(x.montant_debite ?? x.montant_net ?? x.amount ?? 0);
+
+      // Option 2 : Séparation Encaissé SasPay vs Attributions Admin
+      const isManual = (x: any) =>
+        x.methode === "manuel" || x.method === "cash" || x.admin_note?.includes("Attribution");
+
+      const saspayPays = approvedPays.filter((x: any) => !isManual(x));
+      const saspayRevenue = saspayPays.reduce((a, b) => a + getAmount(b), 0);
+
+      const assignedPays = approvedPays.filter((x: any) => isManual(x));
+      const assignedValue = assignedPays.reduce((a, b) => a + getAmount(b), 0);
+      const assignedCount = assignedPays.length;
+
       const { data: profilesData } = await supabase.from("profiles").select("created_at");
-      
-      const approvedPays = (pays ?? []).filter((x) => x.status === "approved");
-      const revenue = approvedPays.reduce((a, b) => a + Number(b.amount), 0);
       const allProfiles = profilesData ?? [];
 
       const revenuePeriods = getPastPeriods(revenueFilter);
       const revenueData = revenuePeriods.map(period => {
-        const total = approvedPays.filter(p => period.match(new Date(p.created_at))).reduce((a, b) => a + Number(b.amount), 0);
+        const total = saspayPays.filter(p => period.match(new Date(p.created_at))).reduce((a, b) => a + getAmount(b), 0);
         return { label: period.label, value: total };
       });
 
@@ -63,15 +83,33 @@ function AdminHome() {
         return { label: period.label, value: total };
       });
 
-      return { m, s, p, o, revenue, revenueData, merchantsData };
+      return { m, s, p, o, saspayRevenue, assignedValue, assignedCount, revenueData, merchantsData };
     },
   });
 
   const stats = [
-    { label: "Commercants", value: data?.m, icon: Users, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
+    { label: "Commerçants", value: data?.m, icon: Users, color: "text-blue-600", bg: "bg-blue-500/10", border: "border-blue-500/20" },
     { label: "Boutiques Actives", value: data?.s, icon: Store, color: "text-purple-600", bg: "bg-purple-500/10", border: "border-purple-500/20" },
     { label: "Produits en ligne", value: data?.p, icon: Package, color: "text-pink-600", bg: "bg-pink-500/10", border: "border-pink-500/20" },
-    { label: "Revenus (Approuves)", value: data ? `${data.revenue} $` : undefined, icon: DollarSign, color: "text-emerald-600", bg: "bg-emerald-500/10", border: "border-emerald-500/20", trend: "+12%" },
+    {
+      label: "Encaissé SasPay (Réel)",
+      value: data ? `${(data.saspayRevenue ?? 0).toFixed(2)} $` : undefined,
+      sublabel: "100% réel · Solde SasPay",
+      icon: DollarSign,
+      color: "text-emerald-600",
+      bg: "bg-emerald-500/10",
+      border: "border-emerald-500/20",
+      trend: "+12%"
+    },
+    {
+      label: "Attributions Admin",
+      value: data ? `${(data.assignedValue ?? 0).toFixed(2)} $` : undefined,
+      sublabel: data ? `${data.assignedCount ?? 0} plan(s) attribué(s)` : undefined,
+      icon: Sparkles,
+      color: "text-indigo-600",
+      bg: "bg-indigo-500/10",
+      border: "border-indigo-500/20"
+    },
   ];
 
   const filterLabels = {
@@ -85,37 +123,43 @@ function AdminHome() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight">Tableau de bord</h1>
-          <p className="mt-1 text-muted-foreground">Voici l'etat actuel de votre plateforme MarketNet aujourd'hui.</p>
+          <p className="mt-1 text-muted-foreground">Voici l'état actuel de votre plateforme MarketNet aujourd'hui.</p>
         </div>
         <div className="flex gap-3">
           <Button variant="outline" asChild className="rounded-xl h-11 bg-background shadow-sm">
-            <Link to="/admin/parametres">Parametres</Link>
+            <Link to="/admin/parametres">Paramètres</Link>
           </Button>
           <Button asChild className="rounded-xl h-11 shadow-sm">
-            <Link to="/admin/boutiques">Gerer les boutiques <ArrowRight className="ml-2 h-4 w-4" /></Link>
+            <Link to="/admin/boutiques">Gérer les boutiques <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
         {stats.map((stat, i) => {
           const Icon = stat.icon;
           return (
-            <div key={i} className="rounded-2xl sm:rounded-3xl border bg-card p-4 sm:p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
-              <div className={`absolute top-0 right-0 w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-transparent to-${stat.color.split('-')[1]}-500/10 rounded-bl-full -z-10`} />
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
-                <div className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl sm:rounded-2xl flex items-center justify-center border ${stat.bg} ${stat.color} ${stat.border}`}>
-                  <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+            <div key={i} className="rounded-2xl sm:rounded-3xl border bg-card p-4 sm:p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2.5 sm:mb-3 gap-2">
+                <div className={`h-9 w-9 sm:h-11 sm:w-11 rounded-xl sm:rounded-2xl flex items-center justify-center border ${stat.bg} ${stat.color} ${stat.border}`}>
+                  <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
-                {stat.trend && <div className="self-start sm:self-auto flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full"><TrendingUp className="h-3 w-3" /> {stat.trend}</div>}
+                {stat.trend && (
+                  <div className="self-start sm:self-auto flex items-center gap-1 text-[10px] sm:text-xs font-semibold text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
+                    <TrendingUp className="h-3 w-3" /> {stat.trend}
+                  </div>
+                )}
               </div>
               <div>
                 {isLoading ? (
-                  <div className="h-6 sm:h-8 w-12 sm:w-16 bg-muted rounded animate-pulse mb-1"></div>
+                  <div className="h-6 sm:h-8 w-14 bg-muted rounded animate-pulse mb-1"></div>
                 ) : (
-                  <p className="text-xl sm:text-3xl font-black text-foreground">{stat.value}</p>
+                  <p className="text-lg sm:text-2xl font-black text-foreground">{stat.value}</p>
                 )}
-                <p className="text-xs sm:text-sm font-medium text-muted-foreground mt-1 truncate">{stat.label}</p>
+                <p className="text-xs font-semibold text-muted-foreground mt-0.5 truncate">{stat.label}</p>
+                {(stat as any).sublabel && (
+                  <p className="text-[10px] text-muted-foreground/80 mt-0.5 truncate">{(stat as any).sublabel}</p>
+                )}
               </div>
             </div>
           );

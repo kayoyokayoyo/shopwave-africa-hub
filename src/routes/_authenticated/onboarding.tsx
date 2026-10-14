@@ -11,6 +11,8 @@ import { ShopPreview } from "@/components/dashboard/ShopPreview";
 import { draftToRow, validateDraft, friendlyDbError } from "@/lib/shopDraft";
 import { SLUG_RE, WHATSAPP_RE } from "@/lib/marketnet";
 import { useMyShop } from "@/hooks/useMyShop";
+import { useServerFn } from "@tanstack/react-start";
+import { notifyMerchantWelcome } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/_authenticated/onboarding")({
   head: () => ({ meta: [{ title: "Créer ma boutique — MarketNet" }, { name: "description", content: "Assistant de création de boutique." }, { property: "og:title", content: "Créer ma boutique — MarketNet" }, { property: "og:description", content: "Assistant de création de boutique MarketNet." }] }),
@@ -27,6 +29,7 @@ function Onboarding() {
   const qc = useQueryClient();
   const { data: shop } = useMyShop();
   const set = (p: Partial<ShopDraft>) => setDraft((d) => ({ ...d, ...p }));
+  const sendWelcomeMail = useServerFn(notifyMerchantWelcome);
 
   useEffect(() => { if (shop) navigate({ to: "/dashboard" }); }, [shop, navigate]);
 
@@ -49,6 +52,21 @@ function Onboarding() {
     if (error) return toast.error(friendlyDbError(error.message));
     await qc.invalidateQueries({ queryKey: ["myShop"] });
     toast.success("Votre boutique est en ligne 🎉");
+    // Email de bienvenue commerçant: fire-and-forget (non bloquant)
+    const userEmail = u.user?.email;
+    const userName = u.user?.user_metadata?.full_name || draft.name;
+    if (userEmail) {
+      sendWelcomeMail({
+        data: {
+          merchantEmail: userEmail,
+          merchantName: userName,
+          shopName: draft.name,
+          shopSlug: draft.slug,
+          whatsapp: draft.whatsapp || undefined,
+          planName: "Gratuit",
+        },
+      }).catch(() => {});
+    }
     navigate({ to: "/dashboard/produits" });
   }
 

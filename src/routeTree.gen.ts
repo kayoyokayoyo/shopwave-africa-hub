@@ -35,6 +35,7 @@ import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authen
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as AuthenticatedDashboardPromotionsRouteImport } from './routes/_authenticated/dashboard.promotions'
 import { Route as AuthenticatedDashboardReglagesRouteImport } from './routes/_authenticated/dashboard.reglages'
+import { Route as ApiPublicInvoicePdfRouteImport } from './routes/api/public/invoice-pdf'
 import { Route as ApiPublicWebhookSaspayRouteImport } from './routes/api/public/webhook-saspay'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as AuthenticatedAdminBoutiquesShopIdRouteImport } from './routes/_authenticated/admin.boutiques_.$shopId'
@@ -184,6 +185,11 @@ const AuthenticatedDashboardReglagesRoute =
     path: '/reglages',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const ApiPublicInvoicePdfRoute = ApiPublicInvoicePdfRouteImport.update({
+  id: '/api/public/invoice-pdf',
+  path: '/api/public/invoice-pdf',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicWebhookSaspayRoute = ApiPublicWebhookSaspayRouteImport.update({
   id: '/api/public/webhook-saspay',
   path: '/api/public/webhook-saspay',
@@ -246,6 +252,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -277,6 +284,7 @@ export interface FileRoutesByTo {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
@@ -313,6 +321,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/_authenticated/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
@@ -349,6 +358,7 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/admin/'
     | '/dashboard/'
@@ -380,6 +390,7 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/admin'
     | '/dashboard'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/produits'
     | '/_authenticated/dashboard/promotions'
     | '/_authenticated/dashboard/reglages'
+    | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
@@ -436,6 +448,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AbonnementRetourRoute: typeof AbonnementRetourRoute
   BSlugRoute: typeof BSlugRouteWithChildren
+  ApiPublicInvoicePdfRoute: typeof ApiPublicInvoicePdfRoute
   ApiPublicWebhookSaspayRoute: typeof ApiPublicWebhookSaspayRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
 }
@@ -624,6 +637,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardReglagesRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/api/public/invoice-pdf': {
+      id: '/api/public/invoice-pdf'
+      path: '/api/public/invoice-pdf'
+      fullPath: '/api/public/invoice-pdf'
+      preLoaderRoute: typeof ApiPublicInvoicePdfRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/webhook-saspay': {
       id: '/api/public/webhook-saspay'
       path: '/api/public/webhook-saspay'
@@ -772,6 +792,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AbonnementRetourRoute: AbonnementRetourRoute,
   BSlugRoute: BSlugRouteWithChildren,
+  ApiPublicInvoicePdfRoute: ApiPublicInvoicePdfRoute,
   ApiPublicWebhookSaspayRoute: ApiPublicWebhookSaspayRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
 }

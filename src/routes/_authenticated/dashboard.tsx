@@ -115,13 +115,13 @@ function DashboardLayout() {
       <aside
         className={cn(
           "hidden shrink-0 border-r bg-sidebar lg:block transition-all duration-300",
-          collapsed ? "w-[80px]" : "w-[260px]"
+          collapsed ? "w-[72px]" : "w-[260px]"
         )}
       >
         <div
           className={cn(
-            "fixed inset-y-0 flex flex-col p-5 transition-all duration-300",
-            collapsed ? "w-[80px]" : "w-[260px]"
+            "fixed inset-y-0 flex flex-col transition-all duration-300 overflow-hidden",
+            collapsed ? "w-[72px] px-3 py-5" : "w-[260px] p-5"
           )}
         >
           {/* En-tête de la sidebar avec logo et bouton collapse propre */}
@@ -169,7 +169,7 @@ function DashboardLayout() {
             )}
           </div>
 
-          <nav className="mt-8 flex-1 space-y-1.5 overflow-y-auto">
+          <nav className={cn("mt-8 flex-1 overflow-y-auto no-scrollbar", collapsed ? "space-y-2" : "space-y-1.5")}>
             {DESKTOP_NAV.map((n) => {
               const count = n.label === "Commandes" ? newOrdersCount || 0 : 0;
               return (
@@ -178,8 +178,8 @@ function DashboardLayout() {
                   to={n.to}
                   activeOptions={{ exact: "exact" in n }}
                   className={cn(
-                    "group flex items-center rounded-2xl text-sm font-medium text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                    collapsed ? "h-12 w-12 mx-auto justify-center" : "gap-3 px-3 py-2.5"
+                    "group relative flex items-center rounded-2xl text-sm font-medium text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                    collapsed ? "h-11 w-11 mx-auto justify-center" : "gap-3 px-3 py-2.5"
                   )}
                   activeProps={{ className: "bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary font-bold shadow-xs" }}
                   title={collapsed ? n.label : undefined}
@@ -193,48 +193,69 @@ function DashboardLayout() {
                     )}
                   </div>
                   {!collapsed && <span>{n.label}</span>}
+                  {/* Tooltip on hover when collapsed */}
+                  {collapsed && (
+                    <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-lg bg-foreground/90 px-2.5 py-1.5 text-xs font-semibold text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                      {n.label}
+                    </span>
+                  )}
                 </Link>
               );
             })}
           </nav>
 
-          <div className="space-y-1.5 pt-4 border-t border-sidebar-border">
+          <div className={cn("pt-4 border-t border-sidebar-border", collapsed ? "space-y-2" : "space-y-1.5")}>
             <Link
               to="/dashboard/abonnement"
               className={cn(
-                "group flex shrink-0 items-center rounded-2xl text-sm text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "h-12 w-12 mx-auto justify-center" : "gap-3 px-3 py-2.5"
+                "group relative flex shrink-0 items-center rounded-2xl text-sm text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed ? "h-11 w-11 mx-auto justify-center" : "gap-3 px-3 py-2.5"
               )}
               activeProps={{ className: "bg-primary/10 text-primary font-bold shadow-xs" }}
               title={collapsed ? "Abonnement" : undefined}
             >
               <CreditCard className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
               {!collapsed && <span>Abonnement</span>}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-lg bg-foreground/90 px-2.5 py-1.5 text-xs font-semibold text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                  Abonnement
+                </span>
+              )}
             </Link>
 
             <Link
               to="/dashboard/reglages"
               className={cn(
-                "group flex shrink-0 items-center rounded-2xl text-sm text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
-                collapsed ? "h-12 w-12 mx-auto justify-center" : "gap-3 px-3 py-2.5"
+                "group relative flex shrink-0 items-center rounded-2xl text-sm text-sidebar-foreground/70 transition-all hover:bg-sidebar-accent hover:text-sidebar-foreground",
+                collapsed ? "h-11 w-11 mx-auto justify-center" : "gap-3 px-3 py-2.5"
               )}
               activeProps={{ className: "bg-primary/10 text-primary font-bold shadow-xs" }}
               title={collapsed ? "Réglages" : undefined}
             >
               <Settings className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
               {!collapsed && <span>Réglages</span>}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-lg bg-foreground/90 px-2.5 py-1.5 text-xs font-semibold text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                  Réglages
+                </span>
+              )}
             </Link>
 
             <button
               onClick={() => supabase.auth.signOut().then(() => (window.location.href = "/auth"))}
               className={cn(
-                "group flex shrink-0 items-center rounded-2xl text-sm text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500",
-                collapsed ? "h-12 w-12 mx-auto justify-center" : "w-full gap-3 px-3 py-2.5"
+                "group relative flex shrink-0 items-center rounded-2xl text-sm text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500",
+                collapsed ? "h-11 w-11 mx-auto justify-center" : "w-full gap-3 px-3 py-2.5"
               )}
               title={collapsed ? "Déconnexion" : undefined}
             >
               <LogOut className="h-5 w-5 shrink-0 transition-transform group-hover:scale-110" />
               {!collapsed && <span>Déconnexion</span>}
+              {collapsed && (
+                <span className="pointer-events-none absolute left-full ml-3 z-50 whitespace-nowrap rounded-lg bg-foreground/90 px-2.5 py-1.5 text-xs font-semibold text-background opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                  Déconnexion
+                </span>
+              )}
             </button>
           </div>
         </div>

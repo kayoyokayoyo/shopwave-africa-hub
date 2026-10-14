@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, CheckCircle2, Loader2, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useServerFn } from "@tanstack/react-start";
+import { notifyNewUserRegistration } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s: Record<string, unknown>) => ({ mode: s.mode === "signup" ? "signup" : s.mode === "forgot" ? "forgot" : "login" }) as { mode: "login" | "signup" | "forgot" },
@@ -37,6 +39,7 @@ function AuthPage() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const sendNewUserNotif = useServerFn(notifyNewUserRegistration);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => { if (data.user) navigate({ to: "/dashboard" }); });
@@ -67,6 +70,8 @@ function AuthPage() {
           options: { emailRedirectTo: `${window.location.origin}/dashboard`, data: { full_name: r.data.name } },
         });
         if (error) throw error;
+        // Notification admin: fire-and-forget (non bloquante)
+        sendNewUserNotif({ data: { email: r.data.email, fullName: r.data.name } }).catch(() => {});
         if (!data.session) { setSent("Compte créé ! Vérifiez votre boîte email pour confirmer votre adresse."); return; }
         navigate({ to: "/dashboard" });
       } else {

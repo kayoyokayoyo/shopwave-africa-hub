@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getMerchantSubscription } from "@/lib/subscriptions.functions";
+import { notifyMerchantAccountDeletion } from "@/lib/admin.functions";
 import { useMyShop } from "@/hooks/useMyShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,6 +76,7 @@ function SettingsPage() {
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [confirmShopName, setConfirmShopName] = useState("");
+  const notifyDeletionFn = useServerFn(notifyMerchantAccountDeletion);
 
   const { data: user } = useQuery({
     queryKey: ["auth-user"],
@@ -144,18 +146,28 @@ function SettingsPage() {
   async function deleteAccount() {
     setDeleting(true);
     try {
-      // 1. Envoyer l'e-mail de confirmation AVANT la suppression (utilisateur encore authentifié)
-      try {
-        const { data: sessionData } = await supabase.auth.getSession();
-        const accessToken = sessionData?.session?.access_token;
-        if (accessToken) {
-          await supabase.functions.invoke("send-deletion-email", {
-            headers: { Authorization: `Bearer ${accessToken}` },
+      const { data: userData } = await supabase.auth.getUser();
+      const userEmail = userData?.user?.email || email || "";
+      const userFullName = userData?.user?.user_metadata?.full_name || fullName || "Cher commerçant";
+      const shopNameVal = shop?.name || "";
+
+      // 1. Envoyer l'e-mail de confirmation AVANT la suppression (session encore valide)
+      if (userEmail) {
+        console.log("[deleteAccount] Envoi email de confirmation suppression à:", userEmail);
+        try {
+          const result = await notifyDeletionFn({
+            data: {
+              email: userEmail,
+              fullName: userFullName,
+              shopName: shopNameVal,
+            },
           });
+          console.log("[deleteAccount] Email envoyé:", result);
+        } catch (emailErr) {
+          console.error("[deleteAccount] Échec envoi e-mail (non bloquant):", emailErr);
         }
-      } catch (emailErr) {
-        // L'e-mail a échoué → on continue quand même la suppression
-        console.warn("Envoi de l'e-mail de confirmation échoué (suppression continue):", emailErr);
+      } else {
+        console.warn("[deleteAccount] Pas d'email trouvé pour la notification.");
       }
 
       // 2. Suppression côté serveur : RPC qui cascade sur shops, products, orders, meta_tokens…

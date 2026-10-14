@@ -429,3 +429,37 @@ npm test
 
           🧡🤍💛🤍💛💗💓💞 MarketNet 
 
+
+---
+
+## Changelog � Mises a jour (Octobre 2026)
+
+### Sidebar amelioree (etat reduit)
+- Icones centrees 44x44 px avec tooltips flottants au survol.
+- Largeur compact 72px, scrollbar masquee, transitions fluides.
+
+### Notifications par E-mail (Nodemailer SMTP)
+Variables : SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MARKETNET_ADMIN_EMAIL, MARKETNET_SITE_URL
+
+| Declencheur | Destinataire | Fonction |
+|---|---|---|
+| Nouvel utilisateur inscrit | Admin | sendNewUserAdminNotification() |
+| Boutique creee (onboarding) | Commercant + Admin | sendMerchantWelcomeEmail() |
+| Auto-suppression compte | Commercant + Admin | sendDeletionConfirmationEmail() |
+| Suppression par admin | Commercant + Admin | sendDeletionConfirmationEmail() |
+| Attribution de plan | Commercant | sendPlanAttributionEmail() |
+
+Fix : middleware requireSupabaseAuth retire de notifyMerchantAccountDeletion.
+
+### Separation Revenus (Option 2)
+- admin/paiements : SasPay reel, Attributions admin, En attente.
+- Dashboard : Revenue Chart = SasPay reel uniquement.
+
+### Suppression Admin securisee
+- Dialog suppression : admin doit saisir son mot de passe.
+- Verification via signInWithPassword() avant execution.
+
+### URL Webhook SasPay Production
+https://marketnet-chi.vercel.app/api/public/webhook-saspay
+(L'URL loca.lt est reservee au developpement local uniquement.)
+

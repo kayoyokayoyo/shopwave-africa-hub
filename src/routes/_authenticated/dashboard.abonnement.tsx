@@ -28,6 +28,10 @@ import {
   ExternalLink,
   Eye,
   RefreshCw,
+  FileDown,
+  Mail,
+  Check,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,6 +42,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import { useMyShop } from "@/hooks/useMyShop";
 import {
   getMerchantSubscription,
@@ -58,7 +68,7 @@ function buildPlanFeatures(p: {
   meta_access: boolean;
   advanced_themes: boolean;
   advanced_stats: boolean;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 }): { text: string; icon: ComponentType<any>; strong?: boolean }[] {
   const features: { text: string; icon: ComponentType<any>; strong?: boolean }[] = [];
 
@@ -152,6 +162,14 @@ function DashboardAbonnementPage() {
   const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+  const [copiedRef, setCopiedRef] = useState(false);
+
+  const handleCopyRef = (refText: string) => {
+    navigator.clipboard.writeText(refText);
+    setCopiedRef(true);
+    toast.success("Référence copiée dans le presse-papier");
+    setTimeout(() => setCopiedRef(false), 2000);
+  };
 
   const getLimitsFn = useServerFn(getMerchantSubscription);
   const getPaymentsFn = useServerFn(getMerchantPayments);
@@ -378,8 +396,8 @@ function DashboardAbonnementPage() {
                       isGrace
                         ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
                         : isExpired
-                        ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
-                        : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                          ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                          : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
                     )}
                   >
                     {isGrace ? "Période de grâce" : isExpired ? "Expiré" : "Actif"}
@@ -508,8 +526,8 @@ function DashboardAbonnementPage() {
                     isPro
                       ? "border-2 border-primary/50 shadow-md relative overflow-hidden"
                       : plan.id === "business"
-                      ? "bg-gradient-to-b from-primary/5 via-card to-card shadow-sm"
-                      : ""
+                        ? "bg-gradient-to-b from-primary/5 via-card to-card shadow-sm"
+                        : ""
                   )}
                 >
                   {isPro && (
@@ -540,9 +558,9 @@ function DashboardAbonnementPage() {
                           <span className="text-3xl font-black">
                             {formatUSD(
                               price?.price_usd ??
-                                (selectedPeriod === "mensuel"
-                                  ? (plan.price_usd ?? 0)
-                                  : (plan.price_usd ?? 0) * 10)
+                              (selectedPeriod === "mensuel"
+                                ? (plan.price_usd ?? 0)
+                                : (plan.price_usd ?? 0) * 10)
                             )}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">
@@ -600,19 +618,15 @@ function DashboardAbonnementPage() {
         </div>
       </section>
 
-      {/* ── Historique des Paiements avec Pagination ─────────────────────── */}
+      {/* ── Historique des Paiements ────────────────────────────────────── */}
       <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-primary/10 text-primary">
-              <Receipt className="h-4 w-4" />
-            </div>
-            <div>
-              <h3 className="font-bold text-base">Historique de vos paiements</h3>
-              <p className="text-xs text-muted-foreground">
-                Consultez vos transactions, reçus et l'état de vos règlements SasPay.
-              </p>
-            </div>
+        {/* En-tête sobre */}
+        <div className="flex items-center justify-between border-b pb-4">
+          <div>
+            <h3 className="font-bold text-base text-foreground">Historique des paiements</h3>
+            <p className="text-xs text-muted-foreground">
+              {allHistory.length} transaction{allHistory.length > 1 ? "s" : ""} enregistrée{allHistory.length > 1 ? "s" : ""}
+            </p>
           </div>
 
           <Button
@@ -620,22 +634,22 @@ function DashboardAbonnementPage() {
             size="sm"
             onClick={() => void refetchPayments()}
             disabled={paymentsFetching}
-            className="h-8 rounded-xl px-2.5 text-xs text-muted-foreground self-start sm:self-center"
+            className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground"
+            title="Actualiser l'historique"
           >
-            <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", paymentsFetching && "animate-spin")} />
-            Actualiser
+            <RefreshCw className={cn("h-3.5 w-3.5", paymentsFetching && "animate-spin")} />
           </Button>
         </div>
 
-        {/* Filtres rapides par pilules */}
+        {/* Filtres épurés façon contrôle segmenté (sans surcharge de badges) */}
         {allHistory.length > 0 && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+          <div className="flex items-center gap-1 p-1 bg-muted/40 rounded-xl w-full sm:w-auto overflow-x-auto scrollbar-none">
             {(
               [
                 { id: "all", label: "Toutes", count: historyCounts.all },
                 { id: "payé", label: "Payées", count: historyCounts.payé },
                 { id: "en_attente", label: "En attente", count: historyCounts.en_attente },
-                { id: "échoué", label: "Échouées / Annulées", count: historyCounts.échoué },
+                { id: "échoué", label: "Échouées", count: historyCounts.échoué },
               ] as { id: HistoryFilter; label: string; count: number }[]
             ).map((filter) => (
               <button
@@ -645,23 +659,13 @@ function DashboardAbonnementPage() {
                   setCurrentPage(1);
                 }}
                 className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors border",
+                  "px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all",
                   historyFilter === filter.id
-                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted"
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                <span>{filter.label}</span>
-                <span
-                  className={cn(
-                    "rounded-full px-1.5 py-0.2 text-[10px] font-bold",
-                    historyFilter === filter.id
-                      ? "bg-primary-foreground/20 text-primary-foreground"
-                      : "bg-muted text-foreground/70"
-                  )}
-                >
-                  {filter.count}
-                </span>
+                {filter.label} <span className="opacity-60 text-[11px]">({filter.count})</span>
               </button>
             ))}
           </div>
@@ -677,7 +681,7 @@ function DashboardAbonnementPage() {
           <div className="py-12 text-center text-xs text-muted-foreground space-y-2">
             <Receipt className="h-8 w-8 mx-auto opacity-20" />
             <p className="font-semibold text-sm text-foreground">Aucun paiement effectué</p>
-            <p>Vos reçus et transactions SasPay s'afficheront ici après votre premier règlement.</p>
+            <p>Vos reçus de paiement s'afficheront ici après votre premier règlement.</p>
           </div>
         ) : filteredHistory.length === 0 ? (
           <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
@@ -696,57 +700,49 @@ function DashboardAbonnementPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="divide-y divide-border rounded-2xl border overflow-hidden bg-card">
+            {/* Liste épurée et sans surcharge de boutons */}
+            <div className="divide-y divide-border/60 rounded-2xl border bg-card overflow-hidden">
               {paginatedHistory.map((pay) => {
                 const status = resolvePaymentStatus(pay);
                 const amountUSD = Number(pay.montant_usd ?? pay.montant_cdf ?? pay.amount ?? 0);
 
-                const statusConfig = {
-                  payé: {
-                    label: "Payé",
-                    style: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
-                    icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
-                    bg: "bg-emerald-500/10",
-                  },
-                  en_attente: {
-                    label: "En attente",
-                    style: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
-                    icon: <Clock className="h-4 w-4 text-amber-600 animate-pulse" />,
-                    bg: "bg-amber-500/10",
-                  },
-                  annulé: {
-                    label: "Annulé",
-                    style: "bg-muted text-muted-foreground border-border",
-                    icon: <XCircle className="h-4 w-4 text-muted-foreground" />,
-                    bg: "bg-muted",
-                  },
-                  échoué: {
-                    label: "Échoué",
-                    style: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
-                    icon: <XCircle className="h-4 w-4 text-rose-600" />,
-                    bg: "bg-rose-500/10",
-                  },
+                const statusDot = {
+                  payé: "bg-emerald-500",
+                  en_attente: "bg-amber-500 animate-pulse",
+                  annulé: "bg-muted-foreground/40",
+                  échoué: "bg-rose-500",
+                }[status];
+
+                const statusLabel = {
+                  payé: "Payé",
+                  en_attente: "En attente",
+                  annulé: "Annulé",
+                  échoué: "Échoué",
+                }[status];
+
+                const statusColor = {
+                  payé: "text-emerald-600 dark:text-emerald-400 font-semibold",
+                  en_attente: "text-amber-600 dark:text-amber-400 font-semibold",
+                  annulé: "text-muted-foreground",
+                  échoué: "text-muted-foreground",
                 }[status];
 
                 return (
                   <div
                     key={pay.id}
-                    className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/20 transition-colors gap-3"
+                    onClick={() => setSelectedReceipt(pay)}
+                    className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer group"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0", statusConfig.bg)}>
-                        {statusConfig.icon}
-                      </div>
+                      <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", statusDot)} />
 
                       <div className="space-y-0.5 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-foreground capitalize truncate">
-                            Plan {pay.plan_id}
-                          </span>
-                          <span className="text-xs text-muted-foreground capitalize">
+                        <p className="font-semibold text-sm text-foreground capitalize truncate group-hover:text-primary transition-colors">
+                          Plan {pay.plan_id}{" "}
+                          <span className="text-muted-foreground font-normal text-xs">
                             · {pay.period || "mensuel"}
                           </span>
-                        </div>
+                        </p>
                         <p className="text-xs text-muted-foreground truncate">
                           {new Date(pay.cree_le ?? "").toLocaleDateString("fr-FR", {
                             day: "numeric",
@@ -762,31 +758,21 @@ function DashboardAbonnementPage() {
                     <div className="flex items-center gap-3 shrink-0 text-right">
                       <div>
                         <p className="font-black text-sm text-foreground">{formatUSD(amountUSD)}</p>
-                        <span className={cn("inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border", statusConfig.style)}>
-                          {statusConfig.label}
-                        </span>
+                        <p className={cn("text-[11px]", statusColor)}>{statusLabel}</p>
                       </div>
 
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setSelectedReceipt(pay)}
-                        className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
-                        title="Consulter les détails"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            {/* Pagination Controls */}
+            {/* Pagination discrète */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between pt-2 px-1 text-xs text-muted-foreground">
                 <span className="text-[11px]">
-                  Affichage {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} sur {filteredHistory.length} transaction(s)
+                  Page {currentPage} sur {totalPages}
                 </span>
 
                 <div className="flex items-center gap-1.5">
@@ -799,10 +785,6 @@ function DashboardAbonnementPage() {
                   >
                     <ChevronLeft className="h-3.5 w-3.5" /> Précédent
                   </Button>
-
-                  <span className="px-2 font-bold text-foreground text-xs">
-                    {currentPage} / {totalPages}
-                  </span>
 
                   <Button
                     size="sm"
@@ -820,115 +802,228 @@ function DashboardAbonnementPage() {
         )}
       </section>
 
-      {/* ── FAQ Facturation ──────────────────────────────────────────────── */}
-      <section className="rounded-3xl border bg-muted/20 p-5 sm:p-6 space-y-4">
-        <div className="flex items-center gap-2 font-bold text-sm">
-          <HelpCircle className="h-4 w-4 text-primary" />
-          <span>Foire aux questions sur la facturation</span>
+      {/* ── FAQ Déroulante & Claire ──────────────────────────────────────── */}
+      <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b pb-4">
+          <div className="w-9 h-9 rounded-2xl bg-primary/10 text-primary flex items-center justify-center shrink-0 font-bold">
+            <HelpCircle className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="font-bold text-base text-foreground">Questions fréquentes</h3>
+            <p className="text-xs text-muted-foreground">Tout comprendre facilement sur votre formule et vos paiements</p>
+          </div>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4 text-xs text-muted-foreground">
-          <div className="space-y-1">
-            <p className="font-bold text-foreground">Quels moyens de paiement sont acceptés ?</p>
-            <p>Nous acceptons M-Pesa, Orange Money, Airtel Money ainsi que les cartes Visa et Mastercard en RDC.</p>
-          </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground">L'activation est-elle immédiate ?</p>
-            <p>Oui ! Dès validation de votre paiement par SasPay, votre boutique est activée automatiquement en temps réel.</p>
-          </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground">Que se passe-t-il si je renouvelle en avance ?</p>
-            <p>Aucun jour n'est perdu ! La nouvelle période s'ajoute directement à la suite de votre date d'expiration actuelle.</p>
-          </div>
-          <div className="space-y-1">
-            <p className="font-bold text-foreground">Besoin d'aide pour payer ?</p>
-            <p>Notre équipe d'assistance est joignable directement par WhatsApp pour vous accompagner.</p>
-          </div>
-        </div>
+        <Accordion type="single" collapsible defaultValue="item-1" className="w-full divide-y divide-border/60">
+          <AccordionItem value="item-1" className="border-b-0 py-1">
+            <AccordionTrigger className="text-left font-semibold text-xs sm:text-sm hover:no-underline py-3 text-foreground">
+              Comment payer mon abonnement ?
+            </AccordionTrigger>
+            <AccordionContent className="text-xs text-muted-foreground leading-relaxed pb-3">
+              C'est très simple ! Choisissez votre formule ci-dessus (Pro ou Business), puis validez avec votre compte Mobile Money habituel (<strong>M-Pesa, Orange Money, Airtel Money</strong>) ou par <strong>carte bancaire</strong>. Vous recevrez directement un message sur votre téléphone pour taper votre code secret et confirmer.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item-2" className="border-b-0 py-1">
+            <AccordionTrigger className="text-left font-semibold text-xs sm:text-sm hover:no-underline py-3 text-foreground">
+              Est-ce que ma boutique est activée tout de suite ?
+            </AccordionTrigger>
+            <AccordionContent className="text-xs text-muted-foreground leading-relaxed pb-3">
+              <strong>Oui, immédiatement !</strong> Dès que vous tapez votre code secret sur votre téléphone, votre paiement est validé et votre boutique s'active automatiquement avec toutes ses options débloquées. Vous n'avez pas besoin d'attendre.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item-3" className="border-b-0 py-1">
+            <AccordionTrigger className="text-left font-semibold text-xs sm:text-sm hover:no-underline py-3 text-foreground">
+              Est-ce que je perds des jours si je paye avant la fin ?
+            </AccordionTrigger>
+            <AccordionContent className="text-xs text-muted-foreground leading-relaxed pb-3">
+              <strong>Non, aucun jour n'est perdu !</strong> Si vous renouvelez avant la date d'échéance, la nouvelle période (1 mois ou 1 an) s'ajoute simplement à la suite de vos jours restants. Vous profitez de chaque journée déjà payée.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item-4" className="border-b-0 py-1">
+            <AccordionTrigger className="text-left font-semibold text-xs sm:text-sm hover:no-underline py-3 text-foreground">
+              Que se passe-t-il si mon abonnement arrive à la fin ?
+            </AccordionTrigger>
+            <AccordionContent className="text-xs text-muted-foreground leading-relaxed pb-3">
+              Votre boutique ne ferme jamais. Vous basculez simplement sur la <strong>formule Gratuite</strong> (avec un maximum de 10 produits visibles). Tous vos autres articles restent bien enregistrés et réapparaissent dès votre réabonnement.
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="item-5" className="border-b-0 py-1">
+            <AccordionTrigger className="text-left font-semibold text-xs sm:text-sm hover:no-underline py-3 text-foreground">
+              Besoin d'aide ou un souci pour payer ?
+            </AccordionTrigger>
+            <AccordionContent className="text-xs text-muted-foreground leading-relaxed pb-3">
+              Notre équipe d'assistance est là pour vous accompagner ! Si un paiement ne passe pas ou si vous avez la moindre question, contactez-nous directement sur <strong>WhatsApp</strong> et nous vous aiderons pas à pas.
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
       </section>
 
-      {/* ── Modale Reçu / Détail de Paiement ─────────────────────────────── */}
+      {/* ── Modale Reçu de Paiement (Design Ticket Épuré & Élégant) ────────── */}
       <Dialog open={!!selectedReceipt} onOpenChange={(o) => !o && setSelectedReceipt(null)}>
-        <DialogContent className="max-w-md rounded-3xl">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold flex items-center gap-2">
-              <Receipt className="h-5 w-5 text-primary" /> Reçu de paiement
+        <DialogContent className="max-w-sm rounded-3xl p-6 sm:p-7 shadow-2xl border bg-background/98 backdrop-blur-xl space-y-0">
+          <DialogHeader className="space-y-1 text-center sm:text-center pb-3">
+            <DialogTitle className="text-base font-bold text-foreground">
+              Reçu de paiement
             </DialogTitle>
-            <DialogDescription>
-              Réf transaction : <span className="font-mono text-xs">{selectedReceipt?.id}</span>
+            <DialogDescription className="text-xs text-muted-foreground">
+              Règlement sécurisé SasPay · MarketNet
             </DialogDescription>
           </DialogHeader>
 
-          {selectedReceipt && (
-            <div className="space-y-3 py-2 text-xs">
-              <div className="p-4 rounded-2xl bg-muted/40 border space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Formule</span>
-                  <span className="font-bold uppercase text-foreground">
-                    Plan {selectedReceipt.plan_id} ({selectedReceipt.period || "mensuel"})
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Statut</span>
-                  <span className="font-bold capitalize text-foreground">
-                    {selectedReceipt.statut || selectedReceipt.status}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Date d'initiation</span>
-                  <span>{new Date(selectedReceipt.cree_le || selectedReceipt.created_at).toLocaleString("fr-FR")}</span>
-                </div>
-                {selectedReceipt.paye_le && (
-                  <div className="flex justify-between items-center text-emerald-600 font-semibold">
-                    <span>Payé le</span>
-                    <span>{new Date(selectedReceipt.paye_le).toLocaleString("fr-FR")}</span>
-                  </div>
-                )}
-              </div>
+          {selectedReceipt && (() => {
+            const status = resolvePaymentStatus(selectedReceipt);
+            const amountUSD = Number(
+              selectedReceipt.montant_usd ?? selectedReceipt.montant_cdf ?? selectedReceipt.amount ?? 0
+            );
 
-              <div className="p-4 rounded-2xl border space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Montant formule :</span>
-                  <span className="font-bold text-foreground">
-                    {formatUSD(Number(selectedReceipt.montant_usd ?? selectedReceipt.montant_cdf ?? selectedReceipt.amount ?? 0))}
-                  </span>
-                </div>
-                {selectedReceipt.frais != null && (
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Frais réseau :</span>
-                    <span>{formatUSD(selectedReceipt.frais)}</span>
-                  </div>
-                )}
-                {selectedReceipt.saspay_transaction_id && (
-                  <div className="flex justify-between pt-1 border-t text-[11px]">
-                    <span className="text-muted-foreground">ID Transaction SasPay :</span>
-                    <span className="font-mono">{selectedReceipt.saspay_transaction_id}</span>
-                  </div>
-                )}
-              </div>
+            const statusConfig = {
+              payé: {
+                label: "Paiement réussi",
+                badgeClass: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
+                icon: CheckCircle2,
+              },
+              en_attente: {
+                label: "En attente de paiement",
+                badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+                icon: Clock,
+              },
+              annulé: {
+                label: "Paiement annulé",
+                badgeClass: "bg-muted text-muted-foreground border-border",
+                icon: XCircle,
+              },
+              échoué: {
+                label: "Non abouti",
+                badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
+                icon: XCircle,
+              },
+            }[status];
 
-              {selectedReceipt.checkout_url && selectedReceipt.statut === "en_attente" && (
-                <div className="pt-2">
+            const StatusIcon = statusConfig.icon;
+
+            return (
+              <div className="space-y-5 pt-2">
+                {/* Montant & Statut */}
+                <div className="text-center space-y-1.5 py-4 rounded-2xl bg-muted/30 border border-border/50">
+                  <p className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
+                    {formatUSD(amountUSD)}
+                  </p>
+                  <div className="flex items-center justify-center">
+                    <span className={cn("inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold border", statusConfig.badgeClass)}>
+                      <StatusIcon className="h-3.5 w-3.5" />
+                      <span>{statusConfig.label}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Détails du paiement en lignes discrètes */}
+                <div className="space-y-3 text-xs">
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Formule</span>
+                    <span className="font-bold text-foreground capitalize">
+                      Plan {selectedReceipt.plan_id} ({selectedReceipt.period || "mensuel"})
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Date</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(selectedReceipt.paye_le || selectedReceipt.cree_le).toLocaleString("fr-FR", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Moyen</span>
+                    <span className="font-medium text-foreground">
+                      SasPay (Mobile Money)
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between items-center text-muted-foreground">
+                    <span>Boutique</span>
+                    <span className="font-medium text-foreground">
+                      {shop?.name || "Votre boutique"}
+                    </span>
+                  </div>
+
+                  {selectedReceipt.saspay_transaction_id && (
+                    <div className="pt-2 border-t flex justify-between items-center text-muted-foreground">
+                      <span>Réf.</span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyRef(selectedReceipt.saspay_transaction_id)}
+                        className="inline-flex items-center gap-1.5 font-mono text-[11px] text-foreground hover:text-primary transition-colors max-w-[200px]"
+                        title="Cliquer pour copier la référence"
+                      >
+                        <span className="truncate">{selectedReceipt.saspay_transaction_id}</span>
+                        {copiedRef ? (
+                          <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                        ) : (
+                          <Copy className="h-3 w-3 text-muted-foreground shrink-0" />
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bouton reprendre si en attente */}
+                {selectedReceipt.checkout_url && status === "en_attente" && (
                   <Button
-                    className="w-full rounded-xl font-bold gap-2"
+                    className="w-full rounded-2xl font-bold h-11 gap-2 shadow-sm text-xs"
                     onClick={() => {
                       window.location.href = selectedReceipt.checkout_url;
                     }}
                   >
-                    Procéder au paiement sur SasPay <ExternalLink className="h-4 w-4" />
+                    Reprendre le paiement SasPay <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
-                </div>
-              )}
-            </div>
-          )}
+                )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSelectedReceipt(null)} className="rounded-xl">
-              Fermer
-            </Button>
-          </DialogFooter>
+                {/* Actions si paiement réussi */}
+                {status === "payé" && (
+                  <div className="space-y-2.5">
+                    {/* Notice envoi automatique email */}
+                    <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/50 dark:border-blue-900/30 text-blue-800 dark:text-blue-300 text-[11px] leading-tight">
+                      <Mail className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                      <span>Facture PDF transmise automatiquement sur votre email de compte.</span>
+                    </div>
+
+                    {/* Bouton Télécharger la facture PDF */}
+                    <Button
+                      variant="outline"
+                      className="w-full rounded-2xl h-11 font-semibold text-xs gap-2 border-primary/25 text-primary hover:bg-primary/10 transition-colors"
+                      onClick={() => {
+                        window.open(`/api/public/invoice-pdf?paymentId=${selectedReceipt.id}`, "_blank");
+                      }}
+                    >
+                      <FileDown className="h-4 w-4" />
+                      Télécharger la facture PDF
+                    </Button>
+                  </div>
+                )}
+
+                <Button
+                  variant="outline"
+                  onClick={() => setSelectedReceipt(null)}
+                  className="w-full rounded-2xl h-10 font-semibold text-xs border-muted-foreground/20 hover:bg-muted"
+                >
+                  Fermer
+                </Button>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
   );
 }
+

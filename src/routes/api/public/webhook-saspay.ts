@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { verifySasPayWebhookSignature, getSasPayCheckoutSession } from "@/lib/saspay";
 import { internalActivateSubscription } from "@/lib/subscriptions.functions";
+import { sendSubscriptionInvoiceEmail } from "@/lib/invoices.server";
 import type { SubscriptionPeriod } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/api/public/webhook-saspay")({
@@ -445,6 +446,17 @@ export const Route = createFileRoute("/api/public/webhook-saspay")({
               planId: paymentRecord.plan_id,
               period: (paymentRecord.period as SubscriptionPeriod) || "mensuel",
               paymentId: paymentRecord.id,
+            });
+
+            // Envoi de la facture par email (best-effort — ne bloque pas le webhook)
+            sendSubscriptionInvoiceEmail({ paymentId: paymentRecord.id }).then((emailResult) => {
+              if (emailResult.success) {
+                console.log(`[Webhook] ✅ Facture envoyée (msgId=${emailResult.messageId})`);
+              } else {
+                console.warn(`[Webhook] ⚠️ Échec envoi facture: ${emailResult.error}`);
+              }
+            }).catch((err) => {
+              console.error("[Webhook] Erreur inattendue envoi facture:", err);
             });
 
             if (eventRecord?.id) {

@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, XCircle, Clock, RefreshCw, ArrowLeft, Receipt } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, RefreshCw, ArrowLeft, Receipt, FileDown, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPaymentStatus } from "@/lib/subscriptions.functions";
 import { formatUSD } from "@/lib/subscriptions";
@@ -260,11 +260,33 @@ function PaymentReturnPage() {
             </div>
           </div>
 
+          {/* Notification envoi automatique email */}
+          <div className="flex items-center gap-2.5 p-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40 text-blue-900 dark:text-blue-300 text-xs">
+            <Mail className="h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+            <div className="leading-snug">
+              <span className="font-semibold block">Facture PDF envoyée par e-mail</span>
+              <span className="text-[11px] opacity-80">Votre reçu officiel a été transmis automatiquement.</span>
+            </div>
+          </div>
+
+          {/* Bouton de téléchargement de la facture */}
           <Button
-            className="w-full rounded-xl font-bold h-11"
-            onClick={() => navigate({ to: "/dashboard/reglages" })}
+            variant="outline"
+            className="w-full rounded-xl font-semibold h-11 text-xs gap-2 border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+            onClick={() => {
+              window.open(`/api/public/invoice-pdf?paymentId=${data.id}`, "_blank");
+            }}
           >
-            Retour à mon compte
+            <FileDown className="h-4 w-4" />
+            Télécharger la facture PDF
+          </Button>
+
+          <Button
+            className="w-full rounded-xl font-bold h-11 gap-2"
+            onClick={() => navigate({ to: "/dashboard/abonnement" })}
+          >
+            Accéder à mon tableau de bord
+            <ArrowRight className="h-4 w-4" />
           </Button>
         </div>
       </PageShell>

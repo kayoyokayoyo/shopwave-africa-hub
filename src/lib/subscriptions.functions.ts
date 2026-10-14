@@ -447,10 +447,14 @@ export const adminAssignPlan = createServerFn({ method: "POST" })
       shopId: z.string().uuid(),
       planId: z.string(),
       period: z.enum(["mensuel", "annuel"]),
-      note: z.string().optional(),
+      note: z.string().min(3, "Veuillez préciser le motif de l'attribution (ex: paiement cash, partenariat, test)"),
+      adminPassword: z.string().min(1, "Mot de passe administrateur requis pour confirmer"),
     })
   )
   .handler(async ({ data: input, context }) => {
+    const sb = supabaseAdmin;
+
+    // 1. Vérifier le rôle administrateur
     const { data: adminRole } = await context.supabase
       .from("user_roles")
       .select("role")
@@ -460,13 +464,149 @@ export const adminAssignPlan = createServerFn({ method: "POST" })
 
     if (!adminRole) throw new Error("Accès refusé : administrateur requis");
 
-    const sub = await internalActivateSubscription({
-      shopId: input.shopId,
-      planId: input.planId,
-      period: input.period,
+    // 2. Récupérer l'email de l'administrateur
+    const { data: adminUser } = await sb.auth.admin.getUserById(context.userId);
+    const adminEmail = adminUser?.user?.email;
+    if (!adminEmail) {
+      throw new Error("Compte administrateur introuvable");
+    }
+
+    // 3. Vérifier la validité du mot de passe administrateur
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "https://lqnuowcgcerrvuvqmnli.supabase.co";
+    const supabaseKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+    const authVerifier = createClient(supabaseUrl, supabaseKey);
+
+    const { error: pwdErr } = await authVerifier.auth.signInWithPassword({
+      email: adminEmail,
+      password: input.adminPassword,
     });
 
-    return { success: true, sub };
+    if (pwdErr) {
+      throw new Error("Mot de passe administrateur incorrect. Action refusée par mesure de sécurité.");
+    }
+
+    // 4. Récupérer la boutique
+    const { data: shop } = await sb
+      .from("shops")
+      .select("id, name, owner_id, plan_id")
+      .eq("id", input.shopId)
+      .single();
+
+    if (!shop) throw new Error("Boutique introuvable");
+    const previousPlan = shop.plan_id;
+
+    // Récupérer le tarif officiel pour la traçabilité comptable
+    const { data: priceRecord } = await sb
+      .from("plan_prices")
+      .select("price_usd")
+      .eq("plan_id", input.planId)
+      .eq("period", input.period)
+      .maybeSingle();
+
+    const amountUSD = Number(priceRecord?.price_usd ?? (input.planId === "business" ? 10 : input.planId === "pro" ? 7 : 0));
+
+    // 5. Créer l'enregistrement de paiement pour traçabilité comptable & historique
+    const reference = `MANUAL-${Date.now().toString().slice(-8)}`;
+    const { data: paymentRecord } = await sb
+      .from("subscription_payments")
+      .insert({
+        shop_id: input.shopId,
+        merchant_id: shop.owner_id,
+        plan_id: input.planId,
+        period: input.period,
+        montant_usd: amountUSD,
+        amount: amountUSD,
+        methode: "manuel",
+        method: "cash",
+        statut: "payé",
+        status: "approved",
+        reference,
+        admin_note: `Attribution manuelle par ${adminEmail} : ${input.note}`,
+        paye_le: new Date().toISOString(),
+        reviewed_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    // 6. Activer l'abonnement
+    const sub = await internalActivateSubscription({
+      shopId: input.shopId,
+      merchantId: shop.owner_id,
+      planId: input.planId,
+      period: input.period,
+      paymentId: paymentRecord?.id,
+    });
+
+    // 7. Enregistrer l'événement d'audit
+    try {
+      await sb.from("payment_events").insert({
+        type_evenement: "admin.assign_plan",
+        session_id: reference,
+        signature_valide: true,
+        recu_le: new Date().toISOString(),
+        resultat: `Succès : Plan ${input.planId.toUpperCase()} (${input.period}) attribué à ${shop.name} par ${adminEmail}. Motif: ${input.note}`,
+        corps: JSON.stringify({
+          adminId: context.userId,
+          adminEmail,
+          shopId: input.shopId,
+          shopName: shop.name,
+          previousPlan,
+          newPlan: input.planId,
+          period: input.period,
+          amountUSD,
+          note: input.note,
+          paymentId: paymentRecord?.id,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (logErr) {
+      console.warn("[AdminAssign] Erreur log audit non bloquante:", logErr);
+    }
+
+    // 8. Envoyer la lettre d'attribution par email (non bloquant)
+    try {
+      const { sendAssignmentLetterEmail } = await import("./invoices.server");
+
+      // Récupérer l'email et le nom du commerçant
+      let merchantEmail = "";
+      let merchantName = shop.name;
+      if (shop.owner_id) {
+        const { data: ownerRecord } = await sb.auth.admin.getUserById(shop.owner_id);
+        if (ownerRecord?.user?.email) merchantEmail = ownerRecord.user.email;
+        if (ownerRecord?.user?.user_metadata?.full_name) merchantName = ownerRecord.user.user_metadata.full_name;
+      }
+
+      // Récupérer la date de fin d'abonnement
+      let validUntil = "";
+      const { data: latestSub } = await sb
+        .from("merchant_subscriptions")
+        .select("fin")
+        .eq("shop_id", input.shopId)
+        .order("fin", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (latestSub?.fin) validUntil = latestSub.fin;
+
+      if (merchantEmail) {
+        await sendAssignmentLetterEmail({
+          shopId: input.shopId,
+          shopName: shop.name,
+          merchantEmail,
+          merchantName,
+          planId: input.planId,
+          period: input.period,
+          validUntil,
+          note: input.note,
+          adminEmail,
+          paymentRef: paymentRecord?.id || reference,
+        });
+      }
+    } catch (emailErr) {
+      console.warn("[AdminAssign] Envoi lettre attribution non bloquant - erreur:", emailErr);
+    }
+
+    return { success: true, sub, payment: paymentRecord };
   });
 
 export const adminGetPaymentEvents = createServerFn({ method: "GET" })

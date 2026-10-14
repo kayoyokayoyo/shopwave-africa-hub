@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -43,6 +43,13 @@ import {
   X,
   DollarSign,
   User,
+  ChevronLeft,
+  ChevronRight,
+  FileDown,
+  Mail,
+  Lock,
+  EyeOff,
+  Sparkles,
 } from "lucide-react";
 import {
   adminGetPayments,
@@ -60,12 +67,18 @@ export const Route = createFileRoute("/_authenticated/admin/paiements")({
   component: AdminPaymentsPage,
 });
 
-type FilterStatus = "all" | "en_attente" | "payé" | "à_vérifier" | "échoué" | "annulé";
+type FilterStatus = "all" | "saspay" | "attribue" | "en_attente" | "à_vérifier" | "échoué" | "annulé";
 
-function getNormalizedStatus(p: any): FilterStatus {
+function isPaymentAttributed(p: any): boolean {
+  const isPaid = p.statut === "payé" || p.status === "approved";
+  const isManual = p.methode === "manuel" || p.method === "manuel" || p.method === "cash" || p.admin_note?.includes("Attribution");
+  return isPaid && isManual;
+}
+
+function getNormalizedStatus(p: any): string {
   const s = p.statut || (p.status === "approved" ? "payé" : p.status === "rejected" ? "échoué" : "en_attente");
   if (s === "payé" || s === "en_attente" || s === "à_vérifier" || s === "échoué" || s === "annulé") {
-    return s as FilterStatus;
+    return s;
   }
   return "en_attente";
 }
@@ -125,19 +138,31 @@ function MetricCard({
   value,
   subtitle,
   icon,
+  accent,
   className,
 }: {
   title: string;
   value: string | number;
   subtitle?: string;
   icon: React.ReactNode;
+  accent?: "green" | "amber" | "blue" | "primary";
   className?: string;
 }) {
+  const accentMap = {
+    green:   { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-600", ring: "ring-emerald-500/20" },
+    amber:   { bg: "bg-amber-500/10",   border: "border-amber-500/20",   text: "text-amber-600",   ring: "ring-amber-500/20" },
+    blue:    { bg: "bg-blue-500/10",    border: "border-blue-500/20",    text: "text-blue-600",    ring: "ring-blue-500/20" },
+    primary: { bg: "bg-primary/10",     border: "border-primary/20",     text: "text-primary",     ring: "ring-primary/20" },
+  };
+  const a = accentMap[accent ?? "primary"];
   return (
-    <div className={cn("rounded-2xl border bg-card p-5 shadow-sm space-y-2", className)}>
-      <div className="flex items-center justify-between text-muted-foreground">
-        <span className="text-xs font-semibold tracking-wide uppercase">{title}</span>
-        <div className="p-2 rounded-xl bg-muted/60">{icon}</div>
+    <div className={cn("relative rounded-2xl border bg-card p-5 shadow-sm space-y-3 overflow-hidden group hover:shadow-md transition-shadow", className)}>
+      <div className="absolute inset-x-0 top-0 h-0.5 rounded-t-2xl" style={{ background: accent === "green" ? "#10b981" : accent === "amber" ? "#f59e0b" : accent === "blue" ? "#3b82f6" : "hsl(var(--primary))" }} />
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">{title}</span>
+        <div className={cn("p-2.5 rounded-xl border", a.bg, a.border)}>
+          <span className={a.text}>{icon}</span>
+        </div>
       </div>
       <div>
         <p className="text-2xl font-black tracking-tight">{value}</p>
@@ -152,6 +177,8 @@ function AdminPaymentsPage() {
   const [activeTab, setActiveTab] = useState<"payments" | "events">("payments");
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
@@ -197,11 +224,20 @@ function AdminPaymentsPage() {
   const [assignPlanId, setAssignPlanId] = useState("pro");
   const [assignPeriod, setAssignPeriod] = useState<SubscriptionPeriod>("mensuel");
   const [assignNote, setAssignNote] = useState("");
+  const [assignAdminPassword, setAssignAdminPassword] = useState("");
+  const [showAssignPassword, setShowAssignPassword] = useState(false);
   const [isAssigning, setIsAssigning] = useState(false);
 
   async function handleAssignPlan(e: React.FormEvent) {
     e.preventDefault();
     if (!assignShopId) return toast.error("Veuillez sélectionner une boutique");
+    if (!assignNote || assignNote.trim().length < 3) {
+      return toast.error("Veuillez préciser le motif de l'attribution (ex: paiement cash, partenariat)");
+    }
+    if (!assignAdminPassword) {
+      return toast.error("Veuillez entrer votre mot de passe administrateur pour confirmer");
+    }
+
     setIsAssigning(true);
     try {
       await assignPlanFn({
@@ -209,12 +245,18 @@ function AdminPaymentsPage() {
           shopId: assignShopId,
           planId: assignPlanId,
           period: assignPeriod,
-          note: assignNote || undefined,
+          note: assignNote.trim(),
+          adminPassword: assignAdminPassword,
         },
       });
-      toast.success("Abonnement attribué avec succès !");
+      toast.success("Abonnement attribué et activé ! La lettre d'attribution a été envoyée par email au commerçant.");
       setIsAssignModalOpen(false);
+      setAssignAdminPassword("");
+      setAssignNote("");
       qc.invalidateQueries({ queryKey: ["admin-subscription-payments-all"] });
+      qc.invalidateQueries({ queryKey: ["admin-shops-lite"] });
+      qc.invalidateQueries({ queryKey: ["admin-payment-events"] });
+      qc.invalidateQueries({ queryKey: ["adminStats"] });
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'attribution");
     } finally {
@@ -246,10 +288,12 @@ function AdminPaymentsPage() {
 
   const allPayments = useMemo(() => (paymentsQuery.data ?? []) as any[], [paymentsQuery.data]);
 
-  // Compute Metrics
+  // Compute Metrics (Option 2 : Séparation Encaissé SasPay vs Attributions Admin)
   const metrics = useMemo(() => {
-    let totalCollectedUSD = 0;
-    let paidCount = 0;
+    let saspayCollectedUSD = 0;
+    let saspayPaidCount = 0;
+    let assignedValueUSD = 0;
+    let assignedCount = 0;
     let pendingCount = 0;
     let failedCount = 0;
     let toReviewCount = 0;
@@ -258,9 +302,14 @@ function AdminPaymentsPage() {
     for (const p of allPayments) {
       const s = getNormalizedStatus(p);
       const amount = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
-      if (s === "payé") {
-        paidCount++;
-        totalCollectedUSD += amount;
+      const attributed = isPaymentAttributed(p);
+
+      if (attributed) {
+        assignedCount++;
+        assignedValueUSD += amount;
+      } else if (s === "payé") {
+        saspayPaidCount++;
+        saspayCollectedUSD += amount;
       } else if (s === "en_attente") {
         pendingCount++;
       } else if (s === "échoué") {
@@ -273,13 +322,16 @@ function AdminPaymentsPage() {
     }
 
     return {
-      totalCollectedUSD,
-      paidCount,
+      saspayCollectedUSD,
+      saspayPaidCount,
+      assignedValueUSD,
+      assignedCount,
       pendingCount,
       failedCount,
       toReviewCount,
       cancelledCount,
       totalCount: allPayments.length,
+      totalCombinedUSD: saspayCollectedUSD + assignedValueUSD,
     };
   }, [allPayments]);
 
@@ -287,7 +339,13 @@ function AdminPaymentsPage() {
   const filteredPayments = useMemo(() => {
     return allPayments.filter((p) => {
       const effectiveStatut = getNormalizedStatus(p);
-      if (statusFilter !== "all" && effectiveStatut !== statusFilter) {
+      const attributed = isPaymentAttributed(p);
+
+      if (statusFilter === "saspay") {
+        if (effectiveStatut !== "payé" || attributed) return false;
+      } else if (statusFilter === "attribue") {
+        if (!attributed) return false;
+      } else if (statusFilter !== "all" && effectiveStatut !== statusFilter) {
         return false;
       }
 
@@ -311,9 +369,21 @@ function AdminPaymentsPage() {
     });
   }, [allPayments, statusFilter, searchTerm]);
 
+  // Reset page when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, searchTerm]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredPayments.length / ITEMS_PER_PAGE));
+  const paginatedPayments = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredPayments.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredPayments, currentPage]);
+
   const filterTabs: { id: FilterStatus; label: string; count: number }[] = [
     { id: "all", label: "Tous", count: metrics.totalCount },
-    { id: "payé", label: "Payés", count: metrics.paidCount },
+    { id: "saspay", label: "Payés SasPay", count: metrics.saspayPaidCount },
+    { id: "attribue", label: "Attribués (Admin)", count: metrics.assignedCount },
     { id: "en_attente", label: "En attente", count: metrics.pendingCount },
     { id: "à_vérifier", label: "À vérifier", count: metrics.toReviewCount },
     { id: "échoué", label: "Échoués", count: metrics.failedCount },
@@ -329,7 +399,7 @@ function AdminPaymentsPage() {
             <CreditCard className="h-6 w-6 text-primary" /> Paiements & Abonnements
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Suivi des paiements réels, gestion des tarifs en USD ($) et transactions SasPay Mobile Money.
+            Suivi des transactions, plans actifs et gestion des abonnements en USD ($) via SasPay.
           </p>
         </div>
 
@@ -347,38 +417,42 @@ function AdminPaymentsPage() {
 
           <Button
             onClick={() => setIsAssignModalOpen(true)}
-            className="rounded-xl font-bold h-10 shadow-sm text-xs sm:text-sm"
+            className="rounded-xl font-bold h-10 shadow-sm text-xs sm:text-sm gap-1.5"
           >
-            <Plus className="h-4 w-4 mr-1.5" /> Attribuer un plan
+            <Plus className="h-4 w-4" /> Attribuer un plan
           </Button>
         </div>
       </div>
 
-      {/* ── Cartes métriques (KPIs aérés) ─────────────────────────────────── */}
+      {/* ── Cartes métriques (Option 2 : SasPay Réel vs Attributions Admin) ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricCard
-          title="Total Encaissé"
-          value={formatUSD(metrics.totalCollectedUSD)}
-          subtitle={`${metrics.paidCount} transaction(s) réussie(s)`}
-          icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
+          accent="green"
+          title="Encaissé SasPay (Réel)"
+          value={formatUSD(metrics.saspayCollectedUSD)}
+          subtitle={`${metrics.saspayPaidCount} paiement(s) mobile money`}
+          icon={<DollarSign className="h-4 w-4" />}
         />
         <MetricCard
+          accent="blue"
+          title="Attributions Admin"
+          value={formatUSD(metrics.assignedValueUSD)}
+          subtitle={`${metrics.assignedCount} plan(s) attribué(s)`}
+          icon={<Sparkles className="h-4 w-4" />}
+        />
+        <MetricCard
+          accent="amber"
           title="En attente SasPay"
           value={metrics.pendingCount}
-          subtitle="En cours sur mobile money"
-          icon={<Clock3 className="h-4 w-4 text-amber-500" />}
+          subtitle="Sessions en cours"
+          icon={<Clock3 className="h-4 w-4" />}
         />
         <MetricCard
-          title="À vérifier (Manuel)"
-          value={metrics.toReviewCount}
-          subtitle="Nécessite une action admin"
-          icon={<ShieldAlert className="h-4 w-4 text-blue-500" />}
-        />
-        <MetricCard
+          accent="primary"
           title="Total Transactions"
           value={metrics.totalCount}
-          subtitle="Volume historique total"
-          icon={<CreditCard className="h-4 w-4 text-primary" />}
+          subtitle={`Volume global (${formatUSD(metrics.totalCombinedUSD)})`}
+          icon={<CreditCard className="h-4 w-4" />}
         />
       </div>
 
@@ -510,118 +584,122 @@ function AdminPaymentsPage() {
               </div>
             )}
 
-            {/* Liste aérée et structurée des paiements */}
+            {/* Liste épurée, aérée et moderne style historique commerçant */}
             {!paymentsQuery.isLoading && !paymentsQuery.isError && filteredPayments.length > 0 && (
-              <div className="divide-y divide-border">
-                {filteredPayments.map((p: any) => {
-                  const effectiveStatut = getNormalizedStatus(p);
-                  const badge = getStatusBadgeConfig(effectiveStatut);
-                  const amountUSD = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
+              <div>
+                <div className="divide-y divide-border/60">
+                  {paginatedPayments.map((p: any) => {
+                    const effectiveStatut = getNormalizedStatus(p);
+                    const amountUSD = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
 
-                  // Les actions Valider/Refuser ne concernent QUE les paiements manuels ou à vérifier.
-                  // Les sessions automatisées SasPay (mobile money) se gèrent automatiquement par webhook.
-                  const isManualReview =
-                    (p.methode === "manuel" || p.method === "manuel") ||
-                    effectiveStatut === "à_vérifier";
+                    const isAttributed =
+                      (p.methode === "manuel" || p.method === "manuel" || p.method === "cash" || p.admin_note?.includes("Attribution")) &&
+                      effectiveStatut === "payé";
 
-                  return (
-                    <div
-                      key={p.id}
-                      className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
-                    >
-                      {/* Colonne 1: Boutique & Marchand */}
-                      <div className="min-w-0 space-y-1 sm:max-w-md">
-                        <div className="flex items-center gap-2">
-                          <p className="font-bold text-sm text-foreground truncate">
-                            {p.shops?.name || "Boutique sans nom"}
-                          </p>
-                          <span className="font-semibold text-[10px] uppercase px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
-                            Plan {p.plan_id}
-                          </span>
-                        </div>
+                    const statusDot = isAttributed
+                      ? "bg-blue-500"
+                      : (
+                          {
+                            payé: "bg-emerald-500",
+                            en_attente: "bg-amber-500 animate-pulse",
+                            à_vérifier: "bg-blue-500 animate-pulse",
+                            échoué: "bg-rose-500",
+                            annulé: "bg-muted-foreground/40",
+                          } as Record<string, string>
+                        )[effectiveStatut] ?? "bg-muted-foreground/40";
 
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                          {p.merchant_profile?.full_name ? (
-                            <span className="flex items-center gap-1 font-medium text-foreground/80">
-                              <User className="h-3 w-3 text-muted-foreground" />
-                              {p.merchant_profile.full_name}
-                            </span>
-                          ) : (
-                            <span>Commerçant</span>
-                          )}
+                    const statusLabel = isAttributed
+                      ? "Attribué"
+                      : (
+                          {
+                            payé: "Payé",
+                            en_attente: "En attente",
+                            à_vérifier: "À vérifier",
+                            échoué: "Échoué",
+                            annulé: "Annulé",
+                          } as Record<string, string>
+                        )[effectiveStatut] ?? effectiveStatut;
 
-                          {p.merchant_profile?.email && (
-                            <>
+                    const statusColor = isAttributed
+                      ? "text-blue-600 dark:text-blue-400 font-semibold"
+                      : (
+                          {
+                            payé: "text-emerald-600 dark:text-emerald-400 font-semibold",
+                            en_attente: "text-amber-600 dark:text-amber-400 font-semibold",
+                            à_vérifier: "text-blue-600 dark:text-blue-400 font-semibold",
+                            échoué: "text-rose-600 dark:text-rose-400 font-semibold",
+                            annulé: "text-muted-foreground",
+                          } as Record<string, string>
+                        )[effectiveStatut] ?? "text-muted-foreground";
+
+                    // Seuls les paiements en attente manuelle (non payés/validés) nécessitent une action
+                    const isManualReview =
+                      (p.methode === "manuel" || p.method === "manuel" || effectiveStatut === "à_vérifier") &&
+                      effectiveStatut !== "payé" &&
+                      effectiveStatut !== "échoué" &&
+                      effectiveStatut !== "annulé";
+
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => setSelectedPayment(p)}
+                        className="flex items-center justify-between p-4 sm:p-4.5 hover:bg-muted/30 transition-colors cursor-pointer group"
+                      >
+                        {/* Colonne gauche : Pastille statut + Infos Boutique, Plan et Commerçant */}
+                        <div className="flex items-center gap-3.5 min-w-0 pr-3">
+                          <span className={cn("h-2.5 w-2.5 rounded-full shrink-0", statusDot)} />
+
+                          <div className="space-y-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-bold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                                {p.shops?.name || "Boutique sans nom"}
+                              </p>
+                              <span className="font-semibold text-[10px] uppercase px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                                Plan {p.plan_id}
+                              </span>
+                              <span className="text-muted-foreground font-normal text-xs">
+                                · {p.period || "mensuel"}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 flex-wrap">
+                              <span className="font-medium text-foreground/80">
+                                {p.merchant_profile?.full_name || "Commerçant"}
+                              </span>
+                              {p.merchant_profile?.email && (
+                                <>
+                                  <span>·</span>
+                                  <span className="truncate max-w-[200px]">{p.merchant_profile.email}</span>
+                                </>
+                              )}
                               <span>·</span>
-                              <span className="truncate max-w-[200px]">{p.merchant_profile.email}</span>
-                            </>
-                          )}
+                              <span>
+                                {new Date(p.cree_le || p.created_at).toLocaleDateString("fr-FR", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
+                              </span>
+                              <span>·</span>
+                              <span className="capitalize text-muted-foreground/80 font-medium">
+                                {isAttributed ? "Attribution admin" : p.methode === "saspay" ? "SasPay" : p.methode || "SasPay"}
+                              </span>
+                            </p>
+                          </div>
                         </div>
 
-                        {p.admin_note && (
-                          <p className="text-[11px] bg-muted/40 px-2 py-1 rounded-md text-muted-foreground border inline-block">
-                            Note : {p.admin_note}
-                          </p>
-                        )}
-                      </div>
+                        {/* Colonne droite : Montant + Statut + Actions manuelles éventuelles + Chevron */}
+                        <div className="flex items-center gap-3 shrink-0 text-right">
+                          <div>
+                            <p className="font-black text-sm text-foreground">{formatUSD(amountUSD)}</p>
+                            <p className={cn("text-[11px]", statusColor)}>{statusLabel}</p>
+                          </div>
 
-                      {/* Colonne 2: Date, Montant et Méthode */}
-                      <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-muted-foreground">
-                        <div>
-                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Montant</p>
-                          <p className="text-base font-black text-foreground">
-                            {formatUSD(amountUSD)}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Date</p>
-                          <p className="font-medium text-foreground/90">
-                            {new Date(p.cree_le || p.created_at).toLocaleDateString("fr-FR", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Passerelle</p>
-                          <p className="font-medium capitalize text-foreground/90">
-                            {p.methode === "saspay" ? "SasPay (Mobile Money)" : p.methode || p.method || "SasPay"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Colonne 3: Statut & Actions */}
-                      <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0">
-                        {/* Badge de Statut propre */}
-                        <div
-                          className={cn(
-                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border",
-                            badge.container
-                          )}
-                        >
-                          <span className={cn("h-1.5 w-1.5 rounded-full", badge.dot)} />
-                          <span>{badge.label}</span>
-                        </div>
-
-                        {/* Actions */}
-                        <div className="flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setSelectedPayment(p)}
-                            className="rounded-xl h-8 px-3 text-xs gap-1.5 font-semibold"
-                          >
-                            <Eye className="h-3.5 w-3.5 text-muted-foreground" /> Détails
-                          </Button>
-
-                          {/* Uniquement pour les paiements nécessitant une revue manuelle */}
+                          {/* Actions rapides de validation pour paiement manuel */}
                           {isManualReview && (
-                            <>
+                            <div className="flex items-center gap-1.5 ml-1" onClick={(e) => e.stopPropagation()}>
                               <Button
                                 size="sm"
                                 onClick={() =>
@@ -631,9 +709,9 @@ function AdminPaymentsPage() {
                                     shopName: p.shops?.name || "cette boutique",
                                   })
                                 }
-                                className="rounded-xl h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                                className="rounded-xl h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
                               >
-                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Valider
+                                <CheckCircle2 className="h-3 w-3 mr-1" /> Valider
                               </Button>
                               <Button
                                 size="sm"
@@ -645,17 +723,50 @@ function AdminPaymentsPage() {
                                     shopName: p.shops?.name || "cette boutique",
                                   })
                                 }
-                                className="rounded-xl h-8 px-2.5 text-xs text-rose-500 hover:bg-rose-500/10 border-rose-200 font-bold"
+                                className="rounded-xl h-7 px-2 text-[11px] text-rose-500 hover:bg-rose-500/10 border-rose-200 font-bold"
                               >
-                                <XCircle className="h-3.5 w-3.5 mr-1" /> Refuser
+                                <XCircle className="h-3 w-3 mr-1" /> Refuser
                               </Button>
-                            </>
+                            </div>
                           )}
+
+                          <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
                         </div>
                       </div>
+                    );
+                  })}
+                </div>
+
+                {/* Pagination épurée */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between p-3.5 border-t bg-muted/15 text-xs text-muted-foreground">
+                    <span className="text-[11px]">
+                      Page {currentPage} sur {totalPages} · {filteredPayments.length} transaction{filteredPayments.length > 1 ? "s" : ""}
+                    </span>
+
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 rounded-xl px-2.5 text-xs gap-1"
+                      >
+                        <ChevronLeft className="h-3.5 w-3.5" /> Précédent
+                      </Button>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                        className="h-8 rounded-xl px-2.5 text-xs gap-1"
+                      >
+                        Suivant <ChevronRight className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
-                  );
-                })}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -728,7 +839,7 @@ function AdminPaymentsPage() {
 
       {/* ── MODAL : DÉTAIL DU PAIEMENT ────────────────────────────────────── */}
       <Dialog open={!!selectedPayment} onOpenChange={(o) => !o && setSelectedPayment(null)}>
-        <DialogContent className="max-w-lg rounded-3xl">
+        <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-lg rounded-3xl max-h-[90vh] flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold flex items-center gap-2">
               <CreditCard className="h-5 w-5 text-primary" /> Détails du paiement
@@ -739,8 +850,8 @@ function AdminPaymentsPage() {
           </DialogHeader>
 
           {selectedPayment && (
-            <div className="space-y-3 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
+            <div className="space-y-3 py-2 text-xs overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
                 <div>
                   <span className="text-muted-foreground">Boutique</span>
                   <p className="font-bold text-sm text-foreground">{selectedPayment.shops?.name || "N/A"}</p>
@@ -768,7 +879,7 @@ function AdminPaymentsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
                 <div>
                   <span className="text-muted-foreground">Montant total</span>
                   <p className="font-bold text-base text-primary">
@@ -777,9 +888,32 @@ function AdminPaymentsPage() {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Statut</span>
-                  <p className="font-bold text-sm capitalize">{selectedPayment.statut || selectedPayment.status}</p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {(() => {
+                      const isModalAttributed =
+                        (selectedPayment.methode === "manuel" || selectedPayment.method === "manuel" || selectedPayment.method === "cash" || selectedPayment.admin_note?.includes("Attribution")) &&
+                        getNormalizedStatus(selectedPayment) === "payé";
+                      if (isModalAttributed) {
+                        return (
+                          <span className="inline-flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold text-sm">
+                            <span className="h-2 w-2 rounded-full bg-blue-500" /> Attribué (Validé)
+                          </span>
+                        );
+                      }
+                      return (
+                        <p className="font-bold text-sm capitalize">{selectedPayment.statut || selectedPayment.status}</p>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
+
+              {selectedPayment.admin_note && (
+                <div className="p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs">
+                  <span className="font-bold text-blue-700 dark:text-blue-300">Note d'attribution / Motif :</span>
+                  <p className="text-muted-foreground mt-0.5">{selectedPayment.admin_note}</p>
+                </div>
+              )}
 
               <div className="space-y-2 p-3.5 rounded-2xl border">
                 <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Passerelle de paiement</p>
@@ -828,7 +962,18 @@ function AdminPaymentsPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+            {selectedPayment && getNormalizedStatus(selectedPayment) === "payé" && (
+              <Button
+                variant="outline"
+                onClick={() =>
+                  window.open(`/api/public/invoice-pdf?paymentId=${selectedPayment.id}`, "_blank")
+                }
+                className="rounded-xl font-semibold text-xs gap-1.5 border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <FileDown className="h-3.5 w-3.5" /> Télécharger la facture PDF
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setSelectedPayment(null)} className="rounded-xl">
               Fermer
             </Button>
@@ -838,16 +983,16 @@ function AdminPaymentsPage() {
 
       {/* ── MODAL : CORPS JSON DU WEBHOOK ─────────────────────────────────── */}
       <Dialog open={!!selectedEvent} onOpenChange={(o) => !o && setSelectedEvent(null)}>
-        <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col rounded-3xl">
+        <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-2xl max-h-[90vh] flex flex-col rounded-3xl">
           <DialogHeader>
             <DialogTitle className="text-base font-bold">Détails de l'événement webhook</DialogTitle>
             <DialogDescription>
-              Événement : <span className="font-mono">{selectedEvent?.type_evenement}</span>
+              Événement : <span className="font-mono text-xs break-all">{selectedEvent?.type_evenement}</span>
             </DialogDescription>
           </DialogHeader>
 
-          <div className="flex-1 overflow-y-auto bg-muted/60 p-4 rounded-2xl border font-mono text-[11px] leading-relaxed">
-            <pre>{JSON.stringify(selectedEvent?.corps ?? {}, null, 2)}</pre>
+          <div className="flex-1 min-h-0 overflow-auto bg-muted/60 p-4 rounded-2xl border font-mono text-[11px] leading-relaxed">
+            <pre className="whitespace-pre-wrap break-words">{JSON.stringify(selectedEvent?.corps ?? {}, null, 2)}</pre>
           </div>
 
           <DialogFooter>
@@ -860,7 +1005,7 @@ function AdminPaymentsPage() {
 
       {/* ── MODAL : VALIDATION / REFUS MANUEL (Uniquement si manuel ou à vérifier) ── */}
       <AlertDialog open={!!reviewModal} onOpenChange={(o) => !o && setReviewModal(null)}>
-        <AlertDialogContent className="max-w-md rounded-3xl">
+        <AlertDialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-md rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-lg font-bold">
               {reviewModal?.decision === "valider" ? "Valider le paiement et activer le plan ?" : "Refuser le paiement ?"}
@@ -882,7 +1027,7 @@ function AdminPaymentsPage() {
             />
           </div>
 
-          <AlertDialogFooter>
+          <AlertDialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
             <AlertDialogCancel className="rounded-xl" disabled={isSubmittingReview}>
               Annuler
             </AlertDialogCancel>
@@ -904,55 +1049,55 @@ function AdminPaymentsPage() {
 
       {/* ── MODAL : ATTRIBUTION MANUELLE D'UN PLAN ────────────────────────── */}
       <Dialog open={isAssignModalOpen} onOpenChange={setIsAssignModalOpen}>
-        <DialogContent className="max-w-md rounded-3xl">
-          <form onSubmit={handleAssignPlan} className="space-y-4">
+        <DialogContent className="w-[calc(100%-2rem)] sm:w-full max-w-md rounded-3xl max-h-[90vh] flex flex-col">
+          <form onSubmit={handleAssignPlan} className="flex flex-col flex-1 overflow-y-auto space-y-4">
             <DialogHeader>
               <DialogTitle className="text-lg font-bold flex items-center gap-2">
                 <Store className="h-5 w-5 text-primary" /> Attribution manuelle d'un plan
               </DialogTitle>
               <DialogDescription>
-                Attribuez ou renouvelez directement un plan sans passer par une transaction bancaire en ligne.
+                Attribuez ou prolongez directement un abonnement (espèces, virement, partenariat ou test).
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-3 py-1">
-              <div className="space-y-1">
-                <Label className="text-xs">Boutique bénéficiaire</Label>
+            <div className="space-y-3.5 py-1">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">Boutique bénéficiaire</Label>
                 <select
                   value={assignShopId}
                   onChange={(e) => setAssignShopId(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                  className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-medium"
                   required
                 >
                   <option value="">Sélectionnez une boutique...</option>
                   {(shopsQuery.data ?? []).map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} ({s.slug}) — Plan actuel : {s.plan_id}
+                      {s.name} ({s.slug}) — Plan actuel : {s.plan_id.toUpperCase()}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">Plan à attribuer</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Plan à attribuer</Label>
                   <select
                     value={assignPlanId}
                     onChange={(e) => setAssignPlanId(e.target.value)}
-                    className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-medium"
                   >
-                    <option value="pro">Pro</option>
-                    <option value="business">Business</option>
-                    <option value="free">Gratuit</option>
+                    <option value="pro">Plan Pro</option>
+                    <option value="business">Plan Business</option>
+                    <option value="free">Formule Gratuite (Free)</option>
                   </select>
                 </div>
 
-                <div className="space-y-1">
-                  <Label className="text-xs">Période</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-semibold">Période</Label>
                   <select
                     value={assignPeriod}
                     onChange={(e) => setAssignPeriod(e.target.value as SubscriptionPeriod)}
-                    className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    className="flex h-11 w-full rounded-xl border border-input bg-card px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary font-medium"
                   >
                     <option value="mensuel">Mensuel (+1 mois)</option>
                     <option value="annuel">Annuel (+1 an)</option>
@@ -960,23 +1105,66 @@ function AdminPaymentsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs">Note ou justification (optionnelle)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold">
+                  Motif de l'attribution <span className="text-destructive">*</span>
+                </Label>
                 <Input
-                  placeholder="ex: Partenariat, test offert, paiement cash direct..."
+                  placeholder="ex: Paiement cash reçu, partenariat officiel, période d'essai..."
                   value={assignNote}
                   onChange={(e) => setAssignNote(e.target.value)}
                   className="h-10 rounded-xl text-xs"
+                  required
                 />
+                <p className="text-[11px] text-muted-foreground">
+                  Cette justification sera inscrite dans le journal d'audit et la référence comptable.
+                </p>
+              </div>
+
+              {/* Champ Mot de passe Administrateur */}
+              <div className="space-y-1.5 pt-2 border-t">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
+                    <Lock className="h-3.5 w-3.5 text-primary" />
+                    Mot de passe administrateur <span className="text-destructive">*</span>
+                  </Label>
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">
+                    Sécurité
+                  </span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type={showAssignPassword ? "text" : "password"}
+                    placeholder="Tapez votre mot de passe pour confirmer"
+                    value={assignAdminPassword}
+                    onChange={(e) => setAssignAdminPassword(e.target.value)}
+                    className="h-10 rounded-xl text-xs pr-10"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAssignPassword((v) => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    title={showAssignPassword ? "Masquer" : "Afficher"}
+                  >
+                    {showAssignPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Notice de sécurité */}
+              <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+                🔒 <strong>Sécurité renforcée :</strong> Votre mot de passe est vérifié avant d'appliquer le changement. L'attribution sera tracée dans le journal d'audit et l'historique des paiements.
               </div>
             </div>
 
-            <DialogFooter className="gap-2">
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => setIsAssignModalOpen(false)} className="rounded-xl">
                 Annuler
               </Button>
-              <Button type="submit" disabled={isAssigning} className="rounded-xl font-bold">
-                {isAssigning ? "Attribution…" : "Activer l'abonnement"}
+              <Button type="submit" disabled={isAssigning} className="rounded-xl font-bold gap-1.5">
+                <CheckCircle2 className="h-4 w-4" />
+                {isAssigning ? "Validation en cours…" : "Confirmer et activer le plan"}
               </Button>
             </DialogFooter>
           </form>
