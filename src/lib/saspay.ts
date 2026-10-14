@@ -117,31 +117,91 @@ export async function createSasPayCheckout(
 }
 
 /**
- * Vérifie la signature HMAC-SHA256 d'un webhook SasPay.
- * Le corps brut (string) est requis — ne pas le parser avant.
+ * Récupère les informations d'une session de paiement SasPay
+ * utile pour relire les métadonnées lors d'un rapprochement.
+ */
+export async function getSasPayCheckoutSession(
+  sessionId: string
+): Promise<SasPayCheckoutResponse | null> {
+  const key = getSasPayKey();
+  try {
+    const res = await fetch(`${SASPAY_BASE_URL}/checkout-sessions/${encodeURIComponent(sessionId)}/`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+      },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as SasPayCheckoutResponse;
+  } catch (err) {
+    console.error("[SasPay] Erreur récupération session:", err);
+    return null;
+  }
+}
+
+export interface WebhookVerificationResult {
+  isValid: boolean;
+  reason?: "missing_headers" | "timestamp_expired" | "invalid_signature" | "secret_missing";
+}
+
+/**
+ * Vérifie l'en-tête X-Webhook-Signature et X-Webhook-Timestamp.
+ * 1. Tolérance de 5 minutes (300 secondes)
+ * 2. HMAC-SHA256 en hexadécimal minuscule de `${timestamp}.${corpsBrut}`
+ * 3. Comparaison en temps constant
  */
 export async function verifySasPayWebhookSignature(
   rawBody: string,
-  signatureHeader: string
-): Promise<boolean> {
+  signatureHeader: string,
+  timestampHeader?: string | null,
+  nowSeconds: number = Math.floor(Date.now() / 1000)
+): Promise<WebhookVerificationResult> {
+  let secret = "";
   try {
-    const secret = getSasPayWebhookSecret();
+    secret = getSasPayWebhookSecret();
+  } catch (_e) {
+    return { isValid: false, reason: "secret_missing" };
+  }
+
+  if (!signatureHeader) {
+    return { isValid: false, reason: "missing_headers" };
+  }
+
+  // Si un timestamp est fourni, vérifier la fenêtre de 5 min (300 s)
+  if (timestampHeader) {
+    const ts = parseInt(timestampHeader, 10);
+    if (isNaN(ts) || Math.abs(nowSeconds - ts) > 300) {
+      return { isValid: false, reason: "timestamp_expired" };
+    }
+  }
+
+  try {
     const hexSig = signatureHeader.replace(/^sha256=/i, "").trim().toLowerCase();
+    
+    // Le message à signer est `${timestamp}.${corpsBrut}` si timestamp est présent, sinon corpsBrut seul
+    const payloadToSign = timestampHeader ? `${timestampHeader}.${rawBody}` : rawBody;
+
     const expectedSig = crypto
       .createHmac("sha256", secret)
-      .update(rawBody, "utf8")
+      .update(payloadToSign, "utf8")
       .digest("hex")
       .toLowerCase();
 
     if (hexSig.length !== expectedSig.length) {
-      return false;
+      return { isValid: false, reason: "invalid_signature" };
     }
 
     const sigBuf = Buffer.from(hexSig, "utf8");
     const expectedBuf = Buffer.from(expectedSig, "utf8");
-    return crypto.timingSafeEqual(sigBuf, expectedBuf);
+    const matches = crypto.timingSafeEqual(sigBuf, expectedBuf);
+
+    return {
+      isValid: matches,
+      reason: matches ? undefined : "invalid_signature",
+    };
   } catch (err) {
     console.error("[SasPay] Erreur de vérification de signature:", err);
-    return false;
+    return { isValid: false, reason: "invalid_signature" };
   }
 }

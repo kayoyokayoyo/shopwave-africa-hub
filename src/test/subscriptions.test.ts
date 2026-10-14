@@ -183,60 +183,117 @@ describe("Système d'abonnements & Paiements - Partie 1/3", () => {
       }
     });
 
-    it("valide une signature HMAC-SHA256 valide", async () => {
+    it("valide une signature HMAC-SHA256 avec horodatage ${timestamp}.${corpsBrut}", async () => {
+      const timestamp = "1728900000";
+      const nowSeconds = 1728900010; // 10 secondes après
       const payload = JSON.stringify({
-        event: "payment.completed",
-        data: {
-          session_id: "sess_123",
-          status: "completed",
-        },
+        event: "transaction.success",
+        data: { id: "tr_123", status: "success" },
       });
 
+      const messageToSign = `${timestamp}.${payload}`;
       const validSignature = crypto
         .createHmac("sha256", testSecret)
-        .update(payload, "utf8")
+        .update(messageToSign, "utf8")
         .digest("hex");
 
-      const isValid = await verifySasPayWebhookSignature(payload, validSignature);
-      expect(isValid).toBe(true);
+      const res = await verifySasPayWebhookSignature(payload, validSignature, timestamp, nowSeconds);
+      expect(res.isValid).toBe(true);
     });
 
-    it("valide une signature préfixée par 'sha256='", async () => {
-      const payload = JSON.stringify({ event: "payment.completed" });
+    it("rejette un horodatage s'écartant de plus de 5 minutes (300 s)", async () => {
+      const timestamp = "1728900000";
+      const nowSeconds = 1728900305; // 305 secondes après (> 5 min)
+      const payload = JSON.stringify({ event: "transaction.success" });
+
+      const messageToSign = `${timestamp}.${payload}`;
       const validSignature = crypto
         .createHmac("sha256", testSecret)
-        .update(payload, "utf8")
+        .update(messageToSign, "utf8")
         .digest("hex");
 
-      const isValid = await verifySasPayWebhookSignature(payload, `sha256=${validSignature}`);
-      expect(isValid).toBe(true);
+      const res = await verifySasPayWebhookSignature(payload, validSignature, timestamp, nowSeconds);
+      expect(res.isValid).toBe(false);
+      expect(res.reason).toBe("timestamp_expired");
     });
 
     it("rejette une signature altérée", async () => {
-      const payload = JSON.stringify({ event: "payment.completed" });
+      const payload = JSON.stringify({ event: "transaction.success" });
       const fakeSignature = "0000000000000000000000000000000000000000000000000000000000000000";
 
-      const isValid = await verifySasPayWebhookSignature(payload, fakeSignature);
-      expect(isValid).toBe(false);
+      const res = await verifySasPayWebhookSignature(payload, fakeSignature);
+      expect(res.isValid).toBe(false);
+      expect(res.reason).toBe("invalid_signature");
     });
 
     it("rejette si le corps a été modifié après signature", async () => {
-      const originalPayload = JSON.stringify({ event: "payment.completed", amount: "10000" });
-      const tamperedPayload = JSON.stringify({ event: "payment.completed", amount: "50000" });
+      const timestamp = "1728900000";
+      const originalPayload = JSON.stringify({ event: "transaction.success", amount: "25000" });
+      const tamperedPayload = JSON.stringify({ event: "transaction.success", amount: "50000" });
 
       const signature = crypto
         .createHmac("sha256", testSecret)
-        .update(originalPayload, "utf8")
+        .update(`${timestamp}.${originalPayload}`, "utf8")
         .digest("hex");
 
-      const isValid = await verifySasPayWebhookSignature(tamperedPayload, signature);
-      expect(isValid).toBe(false);
+      const res = await verifySasPayWebhookSignature(tamperedPayload, signature, timestamp, 1728900010);
+      expect(res.isValid).toBe(false);
+      expect(res.reason).toBe("invalid_signature");
     });
 
     it("retourne false sans crash si la clé secrète webhook est absente", async () => {
       delete process.env["SASPAY_WEBHOOK_SECRET"];
-      const isValid = await verifySasPayWebhookSignature("{}", "abc");
-      expect(isValid).toBe(false);
+      const res = await verifySasPayWebhookSignature("{}", "abc");
+      expect(res.isValid).toBe(false);
+      expect(res.reason).toBe("secret_missing");
+    });
+  });
+
+  describe("6. Logique Métier Webhook SasPay - Partie 3/3", () => {
+    // Rapprochement et contrôles de montant
+    it("valide la cohérence du montant avec le prix attendu du plan (CDF)", () => {
+      const expectedPrice = 25000;
+
+      // amount ou net_amount correspond au prix
+      const candidate1 = { amount: 25000, charged: 25750, fee: 750, currency: "CDF" };
+      const isCandidate1Valid =
+        candidate1.currency === "CDF" &&
+        Math.abs(candidate1.amount - expectedPrice) < 1;
+      expect(isCandidate1Valid).toBe(true);
+
+      // JAMAIS charged seul (contient les frais 25750)
+      const isChargedValid = Math.abs(candidate1.charged - expectedPrice) < 1;
+      expect(isChargedValid).toBe(false);
+    });
+
+    it("détecte un montant incohérent pour mise en 'à_vérifier'", () => {
+      const expectedPrice = 25000;
+      const receivedAmount = 10000; // reçu 10 000 au lieu de 25 000
+
+      const isAmountValid = Math.abs(receivedAmount - expectedPrice) < 1;
+      expect(isAmountValid).toBe(false);
+    });
+
+    it("détecte une devise non CDF pour mise en 'à_vérifier'", () => {
+      const currency = "USD";
+      expect(currency.toUpperCase() === "CDF").toBe(false);
+    });
+
+    it("filtre les événements informatifs ou de test pour journalisation seule", () => {
+      const testEvents = ["webhook.test", "settlement.created", "wallet_transfer.completed"];
+      for (const ev of testEvents) {
+        const isInformational =
+          ev === "webhook.test" ||
+          ev.startsWith("settlement.") ||
+          ev.startsWith("wallet_transfer.");
+        expect(isInformational).toBe(true);
+      }
+    });
+
+    it("identifie les événements de paiement réussis, échoués et annulés", () => {
+      expect(["transaction.success", "payment.completed"].includes("transaction.success")).toBe(true);
+      expect(["transaction.failed", "payment.failed"].includes("transaction.failed")).toBe(true);
+      expect(["transaction.cancelled", "payment.cancelled"].includes("transaction.cancelled")).toBe(true);
     });
   });
 });

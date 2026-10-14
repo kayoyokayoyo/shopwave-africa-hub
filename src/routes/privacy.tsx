@@ -50,7 +50,7 @@ function PrivacyPage() {
             </div>
             <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">Politique de Confidentialité</h1>
             <p className="mt-3 text-muted-foreground text-lg">Protection et transparence de vos données personnelles.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Dernière mise à jour : 12 octobre 2026</p>
+            <p className="mt-1 text-xs text-muted-foreground">Dernière mise à jour : 14 octobre 2026</p>
           </div>
 
           <div className="space-y-12">
@@ -142,6 +142,10 @@ function PrivacyPage() {
                 MarketNet <strong>ne vend jamais vos données personnelles ni celles de vos clients</strong> à des tiers. Les données ne sont partagées qu'avec :
               </p>
               <ul className="space-y-3 mt-3">
+                <li className="flex items-start gap-3 text-muted-foreground text-base sm:text-lg">
+                  <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2.5" />
+                  <span><strong>SasPay :</strong> Notre prestataire de paiement en ligne. Lors de la souscription ou du renouvellement d'un abonnement, le nom de la boutique et l'adresse e-mail du compte commerçant lui sont transmis afin d'initialiser et sécuriser la session de paiement. Aucune coordonnée bancaire ou de paiement n'est stockée par MarketNet.</span>
+                </li>
                 <li className="flex items-start gap-3 text-muted-foreground text-base sm:text-lg">
                   <div className="h-2 w-2 rounded-full bg-primary shrink-0 mt-2.5" />
                   <span><strong>Meta Platforms :</strong> Pour les fonctionnalités de publication et de commande WhatsApp activées par le commerçant.</span>
