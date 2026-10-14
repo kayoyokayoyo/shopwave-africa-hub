@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -38,6 +38,11 @@ import {
   ShieldAlert,
   Search,
   ExternalLink,
+  Clock3,
+  RefreshCw,
+  X,
+  DollarSign,
+  User,
 } from "lucide-react";
 import {
   adminGetPayments,
@@ -55,39 +60,97 @@ export const Route = createFileRoute("/_authenticated/admin/paiements")({
   component: AdminPaymentsPage,
 });
 
-const STATUS_FILTERS = [
-  { id: "all", label: "Tous" },
-  { id: "en_attente", label: "En attente" },
-  { id: "à_vérifier", label: "À vérifier" },
-  { id: "payé", label: "Payés" },
-  { id: "échoué", label: "Échoués" },
-  { id: "expiré", label: "Expirés" },
-  { id: "annulé", label: "Annulés" },
-];
+type FilterStatus = "all" | "en_attente" | "payé" | "à_vérifier" | "échoué" | "annulé";
 
-function statusColor(status: string | null) {
+function getNormalizedStatus(p: any): FilterStatus {
+  const s = p.statut || (p.status === "approved" ? "payé" : p.status === "rejected" ? "échoué" : "en_attente");
+  if (s === "payé" || s === "en_attente" || s === "à_vérifier" || s === "échoué" || s === "annulé") {
+    return s as FilterStatus;
+  }
+  return "en_attente";
+}
+
+function getStatusBadgeConfig(status: string | null) {
   switch (status) {
     case "payé":
     case "approved":
-      return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30";
+      return {
+        label: "Payé",
+        container: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+        dot: "bg-emerald-500",
+      };
     case "en_attente":
     case "pending":
-      return "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30";
+      return {
+        label: "En attente",
+        container: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+        dot: "bg-amber-500 animate-pulse",
+      };
     case "à_vérifier":
-      return "bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30";
+      return {
+        label: "À vérifier",
+        container: "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20",
+        dot: "bg-blue-500",
+      };
     case "échoué":
     case "rejected":
+      return {
+        label: "Échoué",
+        container: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
+        dot: "bg-rose-500",
+      };
     case "annulé":
-      return "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30";
+      return {
+        label: "Annulé",
+        container: "bg-muted text-muted-foreground border-border",
+        dot: "bg-muted-foreground",
+      };
+    case "expiré":
+      return {
+        label: "Expiré",
+        container: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/20",
+        dot: "bg-zinc-400",
+      };
     default:
-      return "bg-muted text-muted-foreground border-border";
+      return {
+        label: status || "Inconnu",
+        container: "bg-muted text-muted-foreground border-border",
+        dot: "bg-muted-foreground",
+      };
   }
+}
+
+function MetricCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  className,
+}: {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={cn("rounded-2xl border bg-card p-5 shadow-sm space-y-2", className)}>
+      <div className="flex items-center justify-between text-muted-foreground">
+        <span className="text-xs font-semibold tracking-wide uppercase">{title}</span>
+        <div className="p-2 rounded-xl bg-muted/60">{icon}</div>
+      </div>
+      <div>
+        <p className="text-2xl font-black tracking-tight">{value}</p>
+        {subtitle && <p className="text-xs text-muted-foreground mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
 }
 
 function AdminPaymentsPage() {
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<"payments" | "events">("payments");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<any | null>(null);
@@ -108,10 +171,10 @@ function AdminPaymentsPage() {
   const reviewPaymentFn = useServerFn(adminReviewPayment);
   const assignPlanFn = useServerFn(adminAssignPlan);
 
-  // Queries
+  // Main Query: Fetch all payments so we have full metrics and instant client filtering
   const paymentsQuery = useQuery({
-    queryKey: ["admin-subscription-payments", statusFilter],
-    queryFn: () => fetchPaymentsFn({ data: { statut: statusFilter } }),
+    queryKey: ["admin-subscription-payments-all"],
+    queryFn: () => fetchPaymentsFn({ data: { statut: "all" } }),
   });
 
   const eventsQuery = useQuery({
@@ -151,7 +214,7 @@ function AdminPaymentsPage() {
       });
       toast.success("Abonnement attribué avec succès !");
       setIsAssignModalOpen(false);
-      qc.invalidateQueries({ queryKey: ["admin-subscription-payments"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscription-payments-all"] });
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'attribution");
     } finally {
@@ -173,7 +236,7 @@ function AdminPaymentsPage() {
       toast.success(res.message);
       setReviewModal(null);
       setAdminNote("");
-      qc.invalidateQueries({ queryKey: ["admin-subscription-payments"] });
+      qc.invalidateQueries({ queryKey: ["admin-subscription-payments-all"] });
     } catch (err: any) {
       toast.error(err.message || "Erreur lors de l'opération");
     } finally {
@@ -181,55 +244,150 @@ function AdminPaymentsPage() {
     }
   }
 
-  // Filter payments locally by search term
-  const paymentsList = (paymentsQuery.data ?? []).filter((p: any) => {
-    if (!searchTerm) return true;
-    const s = searchTerm.toLowerCase();
-    const shopName = p.shops?.name?.toLowerCase() || "";
-    const merchantName = p.merchant_profile?.full_name?.toLowerCase() || "";
-    const merchantEmail = p.merchant_profile?.email?.toLowerCase() || "";
-    const session = p.saspay_session_id?.toLowerCase() || "";
-    const tx = p.saspay_transaction_id?.toLowerCase() || "";
-    const ref = p.reference?.toLowerCase() || "";
-    return (
-      shopName.includes(s) ||
-      merchantName.includes(s) ||
-      merchantEmail.includes(s) ||
-      session.includes(s) ||
-      tx.includes(s) ||
-      ref.includes(s)
-    );
-  });
+  const allPayments = useMemo(() => (paymentsQuery.data ?? []) as any[], [paymentsQuery.data]);
+
+  // Compute Metrics
+  const metrics = useMemo(() => {
+    let totalCollectedUSD = 0;
+    let paidCount = 0;
+    let pendingCount = 0;
+    let failedCount = 0;
+    let toReviewCount = 0;
+    let cancelledCount = 0;
+
+    for (const p of allPayments) {
+      const s = getNormalizedStatus(p);
+      const amount = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
+      if (s === "payé") {
+        paidCount++;
+        totalCollectedUSD += amount;
+      } else if (s === "en_attente") {
+        pendingCount++;
+      } else if (s === "échoué") {
+        failedCount++;
+      } else if (s === "à_vérifier") {
+        toReviewCount++;
+      } else if (s === "annulé") {
+        cancelledCount++;
+      }
+    }
+
+    return {
+      totalCollectedUSD,
+      paidCount,
+      pendingCount,
+      failedCount,
+      toReviewCount,
+      cancelledCount,
+      totalCount: allPayments.length,
+    };
+  }, [allPayments]);
+
+  // Filtered Payments List
+  const filteredPayments = useMemo(() => {
+    return allPayments.filter((p) => {
+      const effectiveStatut = getNormalizedStatus(p);
+      if (statusFilter !== "all" && effectiveStatut !== statusFilter) {
+        return false;
+      }
+
+      if (!searchTerm) return true;
+      const s = searchTerm.toLowerCase().trim();
+      const shopName = p.shops?.name?.toLowerCase() || "";
+      const merchantName = p.merchant_profile?.full_name?.toLowerCase() || "";
+      const merchantEmail = p.merchant_profile?.email?.toLowerCase() || "";
+      const session = p.saspay_session_id?.toLowerCase() || "";
+      const tx = p.saspay_transaction_id?.toLowerCase() || "";
+      const ref = p.reference?.toLowerCase() || "";
+
+      return (
+        shopName.includes(s) ||
+        merchantName.includes(s) ||
+        merchantEmail.includes(s) ||
+        session.includes(s) ||
+        tx.includes(s) ||
+        ref.includes(s)
+      );
+    });
+  }, [allPayments, statusFilter, searchTerm]);
+
+  const filterTabs: { id: FilterStatus; label: string; count: number }[] = [
+    { id: "all", label: "Tous", count: metrics.totalCount },
+    { id: "payé", label: "Payés", count: metrics.paidCount },
+    { id: "en_attente", label: "En attente", count: metrics.pendingCount },
+    { id: "à_vérifier", label: "À vérifier", count: metrics.toReviewCount },
+    { id: "échoué", label: "Échoués", count: metrics.failedCount },
+    { id: "annulé", label: "Annulés", count: metrics.cancelledCount },
+  ];
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-12">
-      {/* Header */}
+    <div className="mx-auto max-w-6xl space-y-6 pb-16">
+      {/* ── En-tête principal ────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight flex items-center gap-2">
             <CreditCard className="h-6 w-6 text-primary" /> Paiements & Abonnements
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Suivi des paiements réels, gestion des tarifs en USD ($) et journal des webhooks.
+            Suivi des paiements réels, gestion des tarifs en USD ($) et transactions SasPay Mobile Money.
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2.5">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => void paymentsQuery.refetch()}
+            disabled={paymentsQuery.isFetching}
+            className="h-10 rounded-xl px-3 font-semibold text-xs"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", paymentsQuery.isFetching && "animate-spin")} />
+            Actualiser
+          </Button>
+
           <Button
             onClick={() => setIsAssignModalOpen(true)}
-            className="rounded-xl font-bold h-10 shadow-sm"
+            className="rounded-xl font-bold h-10 shadow-sm text-xs sm:text-sm"
           >
             <Plus className="h-4 w-4 mr-1.5" /> Attribuer un plan
           </Button>
         </div>
       </div>
 
-      {/* Tabs navigation */}
+      {/* ── Cartes métriques (KPIs aérés) ─────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <MetricCard
+          title="Total Encaissé"
+          value={formatUSD(metrics.totalCollectedUSD)}
+          subtitle={`${metrics.paidCount} transaction(s) réussie(s)`}
+          icon={<DollarSign className="h-4 w-4 text-emerald-600" />}
+        />
+        <MetricCard
+          title="En attente SasPay"
+          value={metrics.pendingCount}
+          subtitle="En cours sur mobile money"
+          icon={<Clock3 className="h-4 w-4 text-amber-500" />}
+        />
+        <MetricCard
+          title="À vérifier (Manuel)"
+          value={metrics.toReviewCount}
+          subtitle="Nécessite une action admin"
+          icon={<ShieldAlert className="h-4 w-4 text-blue-500" />}
+        />
+        <MetricCard
+          title="Total Transactions"
+          value={metrics.totalCount}
+          subtitle="Volume historique total"
+          icon={<CreditCard className="h-4 w-4 text-primary" />}
+        />
+      </div>
+
+      {/* ── Onglets Navigation ───────────────────────────────────────────── */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
         <TabsList className="bg-muted/60 p-1 rounded-2xl h-11 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
           <TabsTrigger value="payments" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <CreditCard className="h-4 w-4" />
-            <span>Paiements</span>
+            <span>Transactions ({metrics.totalCount})</span>
           </TabsTrigger>
           <TabsTrigger value="events" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <Activity className="h-4 w-4" />
@@ -239,200 +397,278 @@ function AdminPaymentsPage() {
 
         {/* ── TAB 1: PAIEMENTS ─────────────────────────────────────────────── */}
         <TabsContent value="payments" className="space-y-4 m-0">
-          {/* Filters & Search */}
-          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between">
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
-              {STATUS_FILTERS.map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => setStatusFilter(f.id)}
-                  className={cn(
-                    "rounded-xl px-3 py-1.5 text-xs font-bold whitespace-nowrap transition-colors border",
-                    statusFilter === f.id
-                      ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                      : "bg-card text-muted-foreground border-border hover:bg-muted"
+          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+            {/* Barre de Recherche et Filtres aérés */}
+            <div className="border-b p-4 sm:p-5 space-y-4 bg-card">
+              <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+                <div className="relative flex-1 max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Rechercher par boutique, commerçant, session…"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 pr-9 h-10 rounded-xl text-xs sm:text-sm bg-muted/30 focus-visible:bg-background"
+                  />
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
                   )}
-                >
-                  {f.label}
-                </button>
-              ))}
-            </div>
+                </div>
 
-            <div className="relative min-w-[240px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Rechercher boutique, commerçant, réf, session…"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 h-10 rounded-xl"
-              />
-            </div>
-          </div>
+                <span className="text-xs text-muted-foreground self-center sm:self-auto font-medium">
+                  {filteredPayments.length} résultat{filteredPayments.length > 1 ? "s" : ""}
+                </span>
+              </div>
 
-          {/* Payments list */}
-          {paymentsQuery.isError ? (
-            <div className="p-8 text-center border-2 border-red-500/20 rounded-3xl bg-red-500/10 text-red-600 dark:text-red-400 space-y-3">
-              <ShieldAlert className="h-8 w-8 mx-auto" />
-              <p className="font-bold text-base">Erreur lors du chargement des paiements</p>
-              <p className="text-xs max-w-md mx-auto">
-                {(paymentsQuery.error as any)?.message || "Impossible de contacter le serveur"}
-              </p>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => paymentsQuery.refetch()}
-                className="rounded-xl"
-              >
-                Réessayer
-              </Button>
-            </div>
-          ) : paymentsQuery.isLoading ? (
-            <div className="p-12 text-center rounded-2xl border bg-card text-muted-foreground animate-pulse">
-              Chargement des paiements…
-            </div>
-          ) : paymentsList.length === 0 ? (
-            <div className="p-12 text-center border-2 border-dashed rounded-3xl bg-muted/10 text-muted-foreground space-y-2">
-              <CreditCard className="h-10 w-10 mx-auto opacity-20" />
-              <p className="font-semibold text-base">Aucun paiement trouvé</p>
-              <p className="text-xs">Aucune transaction ne correspond aux critères sélectionnés.</p>
-            </div>
-          ) : (
-            <div className="grid gap-3">
-              {paymentsList.map((p: any) => {
-                const effectiveStatut =
-                  p.statut ||
-                  (p.status === "approved"
-                    ? "payé"
-                    : p.status === "rejected"
-                    ? "échoué"
-                    : "en_attente");
-                const amountUSD = p.montant_usd ?? p.montant_cdf ?? (p.amount || 0);
-                const isActionable =
-                  effectiveStatut === "à_vérifier" ||
-                  effectiveStatut === "en_attente" ||
-                  p.methode === "manuel";
-
-                return (
-                  <div
-                    key={p.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl border bg-card hover:border-primary/40 transition-colors shadow-sm"
+              {/* Filtres par pilules avec compteurs */}
+              <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+                {filterTabs.map((item) => (
+                  <button
+                    key={item.id}
+                    onClick={() => setStatusFilter(item.id)}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors border",
+                      statusFilter === item.id
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-muted/40 text-muted-foreground border-border hover:bg-muted"
+                    )}
                   >
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-bold text-base truncate">
-                          {p.shops?.name || "Boutique"}
-                        </span>
-                        {p.merchant_profile?.full_name && (
-                          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                            ({p.merchant_profile.full_name})
+                    <span>{item.label}</span>
+                    <span
+                      className={cn(
+                        "rounded-full px-1.5 py-0.2 text-[10px] font-bold",
+                        statusFilter === item.id
+                          ? "bg-primary-foreground/20 text-primary-foreground"
+                          : "bg-muted text-foreground/70"
+                      )}
+                    >
+                      {item.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* État Erreur */}
+            {paymentsQuery.isError && (
+              <div className="p-8 text-center bg-rose-500/5 text-rose-600 dark:text-rose-400 space-y-3">
+                <ShieldAlert className="h-8 w-8 mx-auto opacity-70" />
+                <p className="font-bold text-sm">Erreur lors de la récupération des transactions</p>
+                <p className="text-xs max-w-md mx-auto text-muted-foreground">
+                  {(paymentsQuery.error as any)?.message || "Impossible de contacter le serveur"}
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => paymentsQuery.refetch()}
+                  className="rounded-xl text-xs h-8"
+                >
+                  Réessayer
+                </Button>
+              </div>
+            )}
+
+            {/* État Chargement */}
+            {paymentsQuery.isLoading && (
+              <div className="p-16 text-center text-muted-foreground space-y-2">
+                <RefreshCw className="h-6 w-6 mx-auto animate-spin text-primary" />
+                <p className="text-sm font-medium">Chargement des transactions…</p>
+              </div>
+            )}
+
+            {/* État Vide */}
+            {!paymentsQuery.isLoading && !paymentsQuery.isError && filteredPayments.length === 0 && (
+              <div className="p-16 text-center text-muted-foreground space-y-3">
+                <div className="h-12 w-12 rounded-2xl bg-muted/60 flex items-center justify-center mx-auto">
+                  <CreditCard className="h-6 w-6 opacity-40" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-bold text-base text-foreground">Aucune transaction trouvée</p>
+                  <p className="text-xs max-w-sm mx-auto">
+                    {searchTerm
+                      ? `Aucune transaction ne correspond à « ${searchTerm} ».`
+                      : "Aucun paiement ne correspond au filtre sélectionné."}
+                  </p>
+                </div>
+                {(searchTerm || statusFilter !== "all") && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSearchTerm("");
+                      setStatusFilter("all");
+                    }}
+                    className="rounded-xl text-xs"
+                  >
+                    Réinitialiser les filtres
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Liste aérée et structurée des paiements */}
+            {!paymentsQuery.isLoading && !paymentsQuery.isError && filteredPayments.length > 0 && (
+              <div className="divide-y divide-border">
+                {filteredPayments.map((p: any) => {
+                  const effectiveStatut = getNormalizedStatus(p);
+                  const badge = getStatusBadgeConfig(effectiveStatut);
+                  const amountUSD = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
+
+                  // Les actions Valider/Refuser ne concernent QUE les paiements manuels ou à vérifier.
+                  // Les sessions automatisées SasPay (mobile money) se gèrent automatiquement par webhook.
+                  const isManualReview =
+                    (p.methode === "manuel" || p.method === "manuel") ||
+                    effectiveStatut === "à_vérifier";
+
+                  return (
+                    <div
+                      key={p.id}
+                      className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 hover:bg-muted/20 transition-colors"
+                    >
+                      {/* Colonne 1: Boutique & Marchand */}
+                      <div className="min-w-0 space-y-1 sm:max-w-md">
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-sm text-foreground truncate">
+                            {p.shops?.name || "Boutique sans nom"}
+                          </p>
+                          <span className="font-semibold text-[10px] uppercase px-2 py-0.5 rounded-md bg-muted text-muted-foreground">
+                            Plan {p.plan_id}
                           </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                          {p.merchant_profile?.full_name ? (
+                            <span className="flex items-center gap-1 font-medium text-foreground/80">
+                              <User className="h-3 w-3 text-muted-foreground" />
+                              {p.merchant_profile.full_name}
+                            </span>
+                          ) : (
+                            <span>Commerçant</span>
+                          )}
+
+                          {p.merchant_profile?.email && (
+                            <>
+                              <span>·</span>
+                              <span className="truncate max-w-[200px]">{p.merchant_profile.email}</span>
+                            </>
+                          )}
+                        </div>
+
+                        {p.admin_note && (
+                          <p className="text-[11px] bg-muted/40 px-2 py-1 rounded-md text-muted-foreground border inline-block">
+                            Note : {p.admin_note}
+                          </p>
                         )}
-                        <span className="text-xs text-muted-foreground">·</span>
-                        <span className="font-bold text-xs uppercase px-2 py-0.5 rounded-md bg-muted">
-                          Plan {p.plan_id} ({p.period || `${p.months || 1} mois`})
-                        </span>
-                        <span
+                      </div>
+
+                      {/* Colonne 2: Date, Montant et Méthode */}
+                      <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs text-muted-foreground">
+                        <div>
+                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Montant</p>
+                          <p className="text-base font-black text-foreground">
+                            {formatUSD(amountUSD)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Date</p>
+                          <p className="font-medium text-foreground/90">
+                            {new Date(p.cree_le || p.created_at).toLocaleDateString("fr-FR", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-[10px] uppercase font-semibold text-muted-foreground/70">Passerelle</p>
+                          <p className="font-medium capitalize text-foreground/90">
+                            {p.methode === "saspay" ? "SasPay (Mobile Money)" : p.methode || p.method || "SasPay"}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Colonne 3: Statut & Actions */}
+                      <div className="flex items-center justify-between lg:justify-end gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0">
+                        {/* Badge de Statut propre */}
+                        <div
                           className={cn(
-                            "text-xs font-black uppercase px-2 py-0.5 rounded-md border",
-                            statusColor(effectiveStatut)
+                            "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border",
+                            badge.container
                           )}
                         >
-                          {effectiveStatut}
-                        </span>
-                      </div>
+                          <span className={cn("h-1.5 w-1.5 rounded-full", badge.dot)} />
+                          <span>{badge.label}</span>
+                        </div>
 
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                        <span className="font-black text-foreground text-sm">
-                          {formatUSD(amountUSD)}
-                        </span>
-                        <span>•</span>
-                        <span className="capitalize">
-                          Méthode : {p.methode || p.method || "saspay"}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          {new Date(p.cree_le || p.created_at).toLocaleDateString("fr-FR", {
-                            day: "numeric",
-                            month: "short",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                        {p.merchant_profile?.email && (
-                          <>
-                            <span>•</span>
-                            <span className="truncate max-w-[180px]">
-                              {p.merchant_profile.email}
-                            </span>
-                          </>
-                        )}
-                      </div>
-
-                      {p.admin_note && (
-                        <p className="text-xs bg-muted/40 p-1.5 rounded-lg border text-muted-foreground">
-                          Note admin : {p.admin_note}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setSelectedPayment(p)}
-                        className="rounded-xl h-8 px-2.5 text-xs gap-1"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Détails
-                      </Button>
-
-                      {isActionable && (
-                        <>
-                          <Button
-                            size="sm"
-                            onClick={() =>
-                              setReviewModal({
-                                paymentId: p.id,
-                                decision: "valider",
-                                shopName: p.shops?.name || "cette boutique",
-                              })
-                            }
-                            className="rounded-xl h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Valider
-                          </Button>
+                        {/* Actions */}
+                        <div className="flex items-center gap-2">
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() =>
-                              setReviewModal({
-                                paymentId: p.id,
-                                decision: "refuser",
-                                shopName: p.shops?.name || "cette boutique",
-                              })
-                            }
-                            className="rounded-xl h-8 px-2.5 text-xs text-red-500 hover:bg-red-500/10 border-red-200 font-bold"
+                            onClick={() => setSelectedPayment(p)}
+                            className="rounded-xl h-8 px-3 text-xs gap-1.5 font-semibold"
                           >
-                            <XCircle className="h-3.5 w-3.5 mr-1" /> Refuser
+                            <Eye className="h-3.5 w-3.5 text-muted-foreground" /> Détails
                           </Button>
-                        </>
-                      )}
+
+                          {/* Uniquement pour les paiements nécessitant une revue manuelle */}
+                          {isManualReview && (
+                            <>
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  setReviewModal({
+                                    paymentId: p.id,
+                                    decision: "valider",
+                                    shopName: p.shops?.name || "cette boutique",
+                                  })
+                                }
+                                className="rounded-xl h-8 px-2.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" /> Valider
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setReviewModal({
+                                    paymentId: p.id,
+                                    decision: "refuser",
+                                    shopName: p.shops?.name || "cette boutique",
+                                  })
+                                }
+                                className="rounded-xl h-8 px-2.5 text-xs text-rose-500 hover:bg-rose-500/10 border-rose-200 font-bold"
+                              >
+                                <XCircle className="h-3.5 w-3.5 mr-1" /> Refuser
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         {/* ── TAB 2: JOURNAL DES WEBHOOKS ──────────────────────────────────── */}
         <TabsContent value="events" className="space-y-4 m-0">
           <div className="rounded-2xl border bg-card p-5 space-y-1">
             <h3 className="font-extrabold text-base flex items-center gap-2">
-              <Activity className="h-5 w-5 text-primary" /> Journal Brut des Événements Webhooks
+              <Activity className="h-5 w-5 text-primary" /> Journal Brut des Notifications Webhooks
             </h3>
             <p className="text-xs text-muted-foreground">
-              Historique des notifications instantanées reçues de la passerelle de paiement.
+              Toutes les notifications instantanées transmises par SasPay vers votre serveur.
             </p>
           </div>
 
@@ -443,14 +679,15 @@ function AdminPaymentsPage() {
           ) : ((eventsQuery.data as any[]) ?? []).length === 0 ? (
             <div className="p-12 text-center border-2 border-dashed rounded-3xl bg-muted/10 text-muted-foreground">
               <Activity className="h-10 w-10 mx-auto opacity-20 mb-2" />
-              <p className="font-semibold">Aucun événement webhook reçu pour le moment</p>
+              <p className="font-semibold text-sm">Aucun événement webhook reçu pour le moment</p>
+              <p className="text-xs mt-1">Les webhooks s'afficheront ici automatiquement dès réception.</p>
             </div>
           ) : (
             <div className="space-y-2">
               {((eventsQuery.data as any[]) ?? []).map((ev: any) => (
                 <div
                   key={ev.id}
-                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border bg-card text-xs"
+                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl border bg-card text-xs hover:bg-muted/20 transition-colors"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -462,7 +699,7 @@ function AdminPaymentsPage() {
                           <ShieldCheck className="h-3.5 w-3.5" /> Signature valide
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1 text-red-500 font-semibold text-[11px]">
+                        <span className="flex items-center gap-1 text-rose-500 font-semibold text-[11px]">
                           <ShieldAlert className="h-3.5 w-3.5" /> Signature invalide
                         </span>
                       )}
@@ -478,7 +715,7 @@ function AdminPaymentsPage() {
                     size="sm"
                     variant="outline"
                     onClick={() => setSelectedEvent(ev)}
-                    className="rounded-xl h-7 px-2 text-[11px] self-start sm:self-center"
+                    className="rounded-xl h-7 px-2.5 text-[11px] self-start sm:self-center"
                   >
                     Voir corps JSON
                   </Button>
@@ -503,7 +740,7 @@ function AdminPaymentsPage() {
 
           {selectedPayment && (
             <div className="space-y-3 py-2 text-xs">
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/40 border">
+              <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
                 <div>
                   <span className="text-muted-foreground">Boutique</span>
                   <p className="font-bold text-sm text-foreground">{selectedPayment.shops?.name || "N/A"}</p>
@@ -531,10 +768,10 @@ function AdminPaymentsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 p-3 rounded-2xl bg-muted/40 border">
+              <div className="grid grid-cols-2 gap-2 p-3.5 rounded-2xl bg-muted/40 border">
                 <div>
                   <span className="text-muted-foreground">Montant total</span>
-                  <p className="font-bold text-sm text-primary">
+                  <p className="font-bold text-base text-primary">
                     {formatUSD(selectedPayment.montant_usd ?? selectedPayment.montant_cdf ?? (selectedPayment.amount || 0))}
                   </p>
                 </div>
@@ -544,11 +781,11 @@ function AdminPaymentsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1.5 p-3 rounded-2xl border">
+              <div className="space-y-2 p-3.5 rounded-2xl border">
                 <p className="font-bold text-muted-foreground uppercase text-[10px] tracking-wider">Passerelle de paiement</p>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Méthode :</span>
-                  <span className="font-semibold">{selectedPayment.methode || selectedPayment.method || "saspay"}</span>
+                  <span className="font-semibold">{selectedPayment.methode === "saspay" ? "SasPay (Mobile Money)" : selectedPayment.methode || "saspay"}</span>
                 </div>
                 {selectedPayment.saspay_session_id && (
                   <div className="flex justify-between">
@@ -563,15 +800,15 @@ function AdminPaymentsPage() {
                   </div>
                 )}
                 {selectedPayment.checkout_url && (
-                  <div className="flex justify-between items-center pt-1 border-t">
-                    <span className="text-muted-foreground">Page SasPay :</span>
+                  <div className="flex justify-between items-center pt-1.5 border-t">
+                    <span className="text-muted-foreground">Page de paiement :</span>
                     <a
                       href={selectedPayment.checkout_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-primary hover:underline font-semibold flex items-center gap-1 text-[11px]"
                     >
-                      Ouvrir la session <ExternalLink className="h-3 w-3" />
+                      Ouvrir la session SasPay <ExternalLink className="h-3 w-3" />
                     </a>
                   </div>
                 )}
@@ -621,7 +858,7 @@ function AdminPaymentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* ── MODAL : VALIDATION / REFUS MANUEL ─────────────────────────────── */}
+      {/* ── MODAL : VALIDATION / REFUS MANUEL (Uniquement si manuel ou à vérifier) ── */}
       <AlertDialog open={!!reviewModal} onOpenChange={(o) => !o && setReviewModal(null)}>
         <AlertDialogContent className="max-w-md rounded-3xl">
           <AlertDialogHeader>
@@ -641,7 +878,7 @@ function AdminPaymentsPage() {
               placeholder="ex: Vérifié sur relevé bancaire / rejeté motif..."
               value={adminNote}
               onChange={(e) => setAdminNote(e.target.value)}
-              className="h-9 rounded-xl"
+              className="h-9 rounded-xl text-xs"
             />
           </div>
 
@@ -729,7 +966,7 @@ function AdminPaymentsPage() {
                   placeholder="ex: Partenariat, test offert, paiement cash direct..."
                   value={assignNote}
                   onChange={(e) => setAssignNote(e.target.value)}
-                  className="h-10 rounded-xl"
+                  className="h-10 rounded-xl text-xs"
                 />
               </div>
             </div>
@@ -748,4 +985,3 @@ function AdminPaymentsPage() {
     </div>
   );
 }
-
