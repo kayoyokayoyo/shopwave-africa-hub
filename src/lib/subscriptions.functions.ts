@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { createSasPayCheckout } from "./saspay";
 import {
   calculateSubscriptionDates,
   determineSubscriptionStatus,
@@ -537,3 +538,188 @@ export const processDailySubscriptionChecks = createServerFn({ method: "POST" })
     if (!adminRole) throw new Error("Accès refusé");
     return await internalProcessDailySubscriptionChecks();
   });
+
+// ── 7. Création session de paiement SasPay ─────────────────────────────────────
+
+const APP_URL = "https://marketnet-chi.vercel.app";
+
+export const createCheckoutSession = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator(
+    z.object({
+      shopId: z.string().uuid(),
+      planId: z.enum(["pro", "business"]),
+      period: z.enum(["mensuel", "annuel"]),
+    })
+  )
+  .handler(async ({ data: input, context }) => {
+    const sb = supabaseAdmin;
+
+    // 1. Vérifier propriété de la boutique
+    const { data: shop } = await sb
+      .from("shops")
+      .select("id, owner_id, name")
+      .eq("id", input.shopId)
+      .maybeSingle();
+
+    if (!shop || shop.owner_id !== context.userId) {
+      throw new Error("Boutique introuvable ou accès non autorisé.");
+    }
+
+    // 2. Récupérer l'email du compte
+    const { data: userRecord } = await sb.auth.admin.getUserById(context.userId);
+    const customerEmail = userRecord?.user?.email;
+    const customerName = shop.name || "Commerçant MarketNet";
+
+    if (!customerEmail) {
+      throw new Error("Impossible de récupérer l'adresse e-mail du compte.");
+    }
+
+    // 3. Récupérer le prix depuis plan_prices (jamais depuis le navigateur)
+    const { data: planPrice } = await sb
+      .from("plan_prices")
+      .select("price_cdf, is_active")
+      .eq("plan_id", input.planId)
+      .eq("period", input.period)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (!planPrice) {
+      throw new Error(
+        `Aucun tarif actif trouvé pour le plan ${input.planId} (${input.period}). Contactez l'administration.`
+      );
+    }
+
+    // 4. Déduplication : renvoyer une session existante si déjà en attente et non expirée
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: existingPayment } = await sb
+      .from("subscription_payments")
+      .select("id, checkout_url, cree_le")
+      .eq("merchant_id", context.userId)
+      .eq("shop_id", input.shopId)
+      .eq("plan_id", input.planId)
+      .eq("period", input.period)
+      .eq("statut", "en_attente")
+      .gt("cree_le", oneHourAgo)
+      .not("checkout_url", "is", null)
+      .order("cree_le", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPayment?.checkout_url) {
+      return {
+        paymentId: existingPayment.id,
+        checkoutUrl: existingPayment.checkout_url,
+        reused: true,
+      };
+    }
+
+    // 5. Créer l'enregistrement subscription_payments (statut: en_attente)
+    const { data: payment, error: insertError } = await sb
+      .from("subscription_payments")
+      .insert({
+        merchant_id: context.userId,
+        shop_id: input.shopId,
+        plan_id: input.planId,
+        period: input.period,
+        montant_cdf: planPrice.price_cdf,
+        statut: "en_attente",
+        methode: "saspay",
+      })
+      .select("id")
+      .single();
+
+    if (insertError || !payment) {
+      throw new Error("Impossible de créer l'enregistrement de paiement.");
+    }
+
+    const amountText = planPrice.price_cdf.toFixed(2);
+    const planLabel = input.planId === "pro" ? "Pro" : "Business";
+    const periodLabel = input.period === "mensuel" ? "mensuel" : "annuel";
+    const description = `Abonnement MarketNet : ${planLabel} ${periodLabel}`;
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h
+
+    // 6. Appeler l'API SasPay
+    let sasPaySession;
+    try {
+      sasPaySession = await createSasPayCheckout({
+        amount: amountText,
+        currency: "CDF",
+        description,
+        country: "CD",
+        customer_email: customerEmail,
+        customer_name: customerName,
+        return_url: `${APP_URL}/abonnement/retour?ref=${payment.id}`,
+        metadata: {
+          payment_id: payment.id,
+          merchant_id: context.userId,
+          plan: input.planId,
+          period: input.period,
+        },
+        expires_at: expiresAt,
+      });
+    } catch (err) {
+      // Marquer le paiement comme échoué
+      await sb
+        .from("subscription_payments")
+        .update({ statut: "échoué" })
+        .eq("id", payment.id);
+
+      const msg = err instanceof Error ? err.message : "Erreur SasPay inconnue";
+      throw new Error(msg);
+    }
+
+    // 7. Enregistrer saspay_session_id et checkout_url
+    await sb
+      .from("subscription_payments")
+      .update({
+        saspay_session_id: sasPaySession.id,
+        checkout_url: sasPaySession.checkout_url,
+      })
+      .eq("id", payment.id);
+
+    return {
+      paymentId: payment.id,
+      checkoutUrl: sasPaySession.checkout_url,
+      reused: false,
+    };
+  });
+
+// ── 8. Statut d'un paiement (polling page de retour) ──────────────────────────
+
+export const getPaymentStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator(z.object({ paymentId: z.string().uuid() }))
+  .handler(async ({ data: input, context }) => {
+    const sb = supabaseAdmin;
+
+    const { data: payment, error } = await sb
+      .from("subscription_payments")
+      .select("id, statut, plan_id, period, montant_cdf, montant_debite, montant_net, frais, cree_le, paye_le, merchant_id, shop_id, saspay_transaction_id")
+      .eq("id", input.paymentId)
+      .maybeSingle();
+
+    if (error || !payment) {
+      throw new Error("Paiement introuvable.");
+    }
+
+    // Sécurité : un commerçant ne peut voir que ses propres paiements
+    if (payment.merchant_id !== context.userId) {
+      throw new Error("Accès non autorisé.");
+    }
+
+    return {
+      id: payment.id,
+      statut: payment.statut as PaymentStatus,
+      plan_id: payment.plan_id,
+      period: payment.period as SubscriptionPeriod,
+      montant_cdf: payment.montant_cdf,
+      montant_debite: payment.montant_debite ?? null,
+      montant_net: payment.montant_net ?? null,
+      frais: payment.frais ?? null,
+      cree_le: payment.cree_le,
+      paye_le: payment.paye_le ?? null,
+      transaction_id: payment.saspay_transaction_id ?? null,
+    };
+  });
+

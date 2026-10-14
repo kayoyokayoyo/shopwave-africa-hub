@@ -1,11 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles, Trash2, AlertTriangle, Lock, Eye, EyeOff, Loader2, Store, Clock, Zap } from "lucide-react";
+import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles, Trash2, AlertTriangle, Lock, Eye, EyeOff, Loader2, Store, Clock, Zap, ArrowRight, Receipt, Star, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { getMerchantSubscription } from "@/lib/subscriptions.functions";
+import { getMerchantSubscription, getMerchantPayments, getPlanPrices, createCheckoutSession } from "@/lib/subscriptions.functions";
+import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { useMyShop } from "@/hooks/useMyShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,6 +44,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/reglages")({
 function SettingsPage() {
   const { data: shop } = useMyShop();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [saving, setSaving] = useState(false);
@@ -53,6 +55,8 @@ function SettingsPage() {
   const [verifyingPassword, setVerifyingPassword] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [confirmShopName, setConfirmShopName] = useState("");
+  const [selectedPeriod, setSelectedPeriod] = useState<SubscriptionPeriod>("mensuel");
+  const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
 
   const { data: user } = useQuery({
     queryKey: ["auth-user"],
@@ -72,11 +76,46 @@ function SettingsPage() {
   });
 
   const getSubFn = useServerFn(getMerchantSubscription);
+  const getPaymentsFn = useServerFn(getMerchantPayments);
+  const getPricesFn = useServerFn(getPlanPrices);
+  const createCheckoutFn = useServerFn(createCheckoutSession);
+
   const { data: subLimits } = useQuery({
     queryKey: ["merchant-subscription-limits", shop?.id],
     enabled: !!shop?.id,
     queryFn: () => getSubFn({ data: { shopId: shop!.id } }),
   });
+
+  const { data: planPrices } = useQuery({
+    queryKey: ["plan-prices"],
+    queryFn: () => getPricesFn(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: paymentHistory } = useQuery({
+    queryKey: ["merchant-payments", shop?.id],
+    enabled: !!shop?.id,
+    queryFn: () => getPaymentsFn({ data: { shopId: shop!.id } }),
+  });
+
+  async function handlePay(planId: string) {
+    if (!shop?.id) return toast.error("Boutique introuvable");
+    setPayingPlanId(planId);
+    try {
+      const result = await createCheckoutFn({
+        data: {
+          shopId: shop.id,
+          planId: planId as "pro" | "business",
+          period: selectedPeriod,
+        },
+      });
+      // Redirection vers la page de paiement SasPay
+      window.location.href = result.checkoutUrl;
+    } catch (err: any) {
+      toast.error(err.message || "Impossible de créer la session de paiement.");
+      setPayingPlanId(null);
+    }
+  }
 
   useEffect(() => {
     if (user) {
@@ -210,94 +249,238 @@ function SettingsPage() {
       </section>
 
       {/* Abonnement */}
-      <section className="rounded-2xl border bg-card p-4 sm:p-6 shadow-sm space-y-4">
+      <section className="rounded-2xl border bg-card p-4 sm:p-6 shadow-sm space-y-5">
         <div className="flex items-center gap-3 border-b pb-3 sm:pb-4">
           <div className="flex h-9 w-9 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-orange-500/10 text-orange-500 shrink-0">
             <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
           </div>
           <div>
-            <h2 className="font-bold text-sm sm:text-base">Abonnement & Plan</h2>
-            <p className="text-[11px] sm:text-xs text-muted-foreground">Fonctionnalités et limites actives sur votre boutique.</p>
+            <h2 className="font-bold text-sm sm:text-base">Abonnement &amp; Plan</h2>
+            <p className="text-[11px] sm:text-xs text-muted-foreground">Gérez votre formule et effectuez vos paiements en toute sécurité.</p>
           </div>
         </div>
 
-        {/* Rappels dans l'application (7 jours, 3 jours, Grâce) */}
+        {/* Rappels */}
         {subLimits?.reminder_level === "7_days" && (
           <div className="flex items-center gap-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3.5 text-amber-700 dark:text-amber-300 text-xs sm:text-sm">
             <Clock className="h-5 w-5 shrink-0" />
             <div>
               <p className="font-bold">Rappel : votre abonnement expire dans {subLimits.days_remaining} jour(s)</p>
-              <p className="text-xs opacity-90">Pensez à renouveler votre formule pour continuer à profiter de toutes vos fonctionnalités sans interruption.</p>
+              <p className="text-xs opacity-90">Pensez à renouveler pour éviter toute interruption.</p>
             </div>
           </div>
         )}
-
         {subLimits?.reminder_level === "3_days" && (
           <div className="flex items-center gap-3 rounded-2xl bg-red-500/10 border border-red-500/20 p-3.5 text-red-700 dark:text-red-300 text-xs sm:text-sm">
             <AlertTriangle className="h-5 w-5 shrink-0 animate-bounce" />
             <div>
-              <p className="font-bold">Urgent : votre abonnement expire dans {subLimits.days_remaining} jour(s)</p>
-              <p className="text-xs opacity-90">Renouvelez dès maintenant pour éviter le passage en période de grâce ou la suspension de vos fonctionnalités avancées.</p>
+              <p className="font-bold">Urgent : expire dans {subLimits.days_remaining} jour(s) — Renouvelez maintenant</p>
             </div>
           </div>
         )}
-
         {subLimits?.is_grace_period && (
           <div className="flex items-center gap-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 p-3.5 text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
             <Clock className="h-5 w-5 shrink-0 text-amber-600" />
             <div>
               <p className="font-bold">Période de grâce active (7 jours)</p>
-              <p className="text-xs opacity-90">
-                Votre abonnement est échu. Vos services restent temporairement accessibles. Au terme de la période de grâce, votre boutique repassera automatiquement au plan Gratuit et les éléments en surplus seront mis en pause sans être supprimés.
-              </p>
+              <p className="text-xs opacity-90">Renouvelez maintenant pour ne pas perdre vos fonctionnalités avancées.</p>
             </div>
           </div>
         )}
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-xl bg-muted/40 p-3.5 sm:p-4 border">
-          <div>
+        {/* Plan actuel */}
+        <div className="rounded-xl bg-muted/40 border p-3.5 sm:p-4">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <span className="font-extrabold text-base sm:text-lg capitalize">
-                {subLimits?.plan_name || plan?.name || shop?.plan_id || "Gratuit"}
+                {subLimits?.plan_name || shop?.plan_id || "Gratuit"}
               </span>
-              <span
-                className={cn(
-                  "rounded-full px-2.5 py-0.5 text-xs font-bold",
-                  subLimits?.status === "grâce"
-                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                    : subLimits?.status === "expiré"
-                    ? "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30"
-                    : "bg-primary/15 text-primary"
-                )}
-              >
+              <span className={cn(
+                "rounded-full px-2.5 py-0.5 text-xs font-bold border",
+                subLimits?.status === "grâce"
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                  : subLimits?.status === "expiré"
+                  ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                  : "bg-primary/15 text-primary border-primary/20"
+              )}>
                 {subLimits?.status === "grâce" ? "Période de grâce" : subLimits?.status === "expiré" ? "Expiré" : "Actif"}
               </span>
             </div>
-
             {subLimits?.ends_at && subLimits.plan_id !== "free" && (
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground">
                 Valide jusqu'au {new Date(subLimits.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
               </p>
             )}
-
-            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-              <span className="bg-background px-2 py-0.5 rounded border">
-                {subLimits?.max_products != null ? `Jusqu'à ${subLimits.max_products} produits` : "Produits illimités"}
-              </span>
-              <span className="bg-background px-2 py-0.5 rounded border">
-                {subLimits?.max_active_promotions != null ? `${subLimits.max_active_promotions} promo(s) active(s)` : "Promos illimitées"}
-              </span>
-              <span className="bg-background px-2 py-0.5 rounded border">
-                {subLimits?.max_photos ? `${subLimits.max_photos} photos / produit` : "3 photos / produit"}
-              </span>
-            </div>
           </div>
-
-          <div className="flex items-center gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/60">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Contactez l'administration pour renouveler ou changer de plan</span>
+          <div className="mt-2.5 flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+            <span className="bg-background px-2 py-0.5 rounded border">
+              {subLimits?.max_products != null ? `Jusqu'à ${subLimits.max_products} produits` : "Produits illimités"}
+            </span>
+            <span className="bg-background px-2 py-0.5 rounded border">
+              {subLimits?.max_active_promotions != null ? `${subLimits.max_active_promotions} promo(s)` : "Promos illimitées"}
+            </span>
+            <span className="bg-background px-2 py-0.5 rounded border">
+              {subLimits?.max_photos ? `${subLimits.max_photos} photos/produit` : "3 photos/produit"}
+            </span>
           </div>
         </div>
+
+        {/* Sélecteur de période */}
+        <div>
+          <p className="text-xs font-semibold text-muted-foreground mb-2">Choisir une période :</p>
+          <div className="inline-flex rounded-xl border bg-muted/40 p-1 gap-1">
+            {(["mensuel", "annuel"] as SubscriptionPeriod[]).map((p) => (
+              <button
+                key={p}
+                onClick={() => setSelectedPeriod(p)}
+                className={cn(
+                  "px-4 py-1.5 rounded-lg text-xs font-bold transition-all",
+                  selectedPeriod === p
+                    ? "bg-primary text-primary-foreground shadow"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {p === "mensuel" ? "Mensuel" : "Annuel (économisez ~17%)"}  
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Cartes des plans */}
+        <div className="grid sm:grid-cols-2 gap-3">
+          {(["pro", "business"] as const).map((planId) => {
+            const price = planPrices?.find((pp) => pp.plan_id === planId && pp.period === selectedPeriod);
+            const isCurrentPlan = subLimits?.plan_id === planId && subLimits.status === "actif";
+            const isPaying = payingPlanId === planId;
+            const features = planId === "pro"
+              ? ["Jusqu'à 50 produits", "5 photos / produit", "Promotions illimitées", "Statistiques avancées"]
+              : ["Produits illimités", "10 photos / produit", "Templates premium", "Accès Meta Ads", "Priorité support"];
+
+            return (
+              <div
+                key={planId}
+                className={cn(
+                  "rounded-2xl border p-4 space-y-3 transition-all",
+                  planId === "business"
+                    ? "border-primary/40 bg-primary/5 shadow-md shadow-primary/10"
+                    : "border-border bg-card"
+                )}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {planId === "pro" ? (
+                      <Star className="h-4 w-4 text-amber-500" />
+                    ) : (
+                      <Rocket className="h-4 w-4 text-primary" />
+                    )}
+                    <span className="font-extrabold text-base capitalize">{planId}</span>
+                  </div>
+                  {isCurrentPlan && (
+                    <span className="text-[10px] font-bold bg-primary/15 text-primary border border-primary/20 px-2 py-0.5 rounded-full">
+                      Plan actuel
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  {price ? (
+                    <>
+                      <span className="text-2xl font-extrabold">{formatCDF(price.price_cdf)}</span>
+                      <span className="text-xs text-muted-foreground ml-1">/{selectedPeriod === "mensuel" ? "mois" : "an"}</span>
+                    </>
+                  ) : (
+                    <span className="text-sm text-muted-foreground">Prix non disponible</span>
+                  )}
+                </div>
+
+                <ul className="space-y-1">
+                  {features.map((f) => (
+                    <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className={cn(
+                    "w-full rounded-xl font-bold h-10 gap-1.5",
+                    planId === "business" && !isCurrentPlan
+                      ? "bg-primary hover:bg-primary/90"
+                      : ""
+                  )}
+                  disabled={!price || isPaying || !!payingPlanId}
+                  onClick={() => handlePay(planId)}
+                  variant={isCurrentPlan ? "outline" : "default"}
+                >
+                  {isPaying ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Redirection...</>
+                  ) : isCurrentPlan ? (
+                    <><ArrowRight className="h-4 w-4" /> Renouveler</>
+                  ) : (
+                    <><ArrowRight className="h-4 w-4" /> Choisir {planId === "pro" ? "Pro" : "Business"}</>
+                  )}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Avertissement frais */}
+        <p className="text-[11px] text-muted-foreground flex items-start gap-1.5">
+          <Shield className="h-3.5 w-3.5 shrink-0 mt-0.5 text-muted-foreground/70" />
+          Des frais de paiement s'ajoutent au prix affiché, ils seront indiqués sur la page de paiement SasPay avant de confirmer.
+        </p>
+
+        {/* Historique des paiements */}
+        {paymentHistory && paymentHistory.length > 0 && (
+          <div className="space-y-2">
+            <p className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+              <Receipt className="h-3.5 w-3.5" /> Historique des paiements
+            </p>
+            <div className="divide-y rounded-xl border bg-card overflow-hidden">
+              {paymentHistory.slice(0, 5).map((pay) => {
+                const statusStyle =
+                  pay.statut === "payé"
+                    ? "text-emerald-600 bg-emerald-500/10"
+                    : pay.statut === "en_attente" || pay.statut === "à_vérifier"
+                    ? "text-amber-600 bg-amber-500/10"
+                    : "text-red-600 bg-red-500/10";
+                const statusLabel: Record<string, string> = {
+                  payé: "Payé",
+                  en_attente: "En attente",
+                  à_vérifier: "À vérifier",
+                  échoué: "Échoué",
+                  annulé: "Annulé",
+                  expiré: "Expiré",
+                };
+                return (
+                  <div key={pay.id} className="flex items-center justify-between gap-3 px-4 py-3 text-xs">
+                    <div className="space-y-0.5">
+                      <p className="font-bold capitalize">
+                        {pay.plan_id} — {pay.period || "mensuel"}
+                      </p>
+                      <p className="text-muted-foreground">
+                        {new Date(pay.cree_le ?? "").toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" })}
+                        {pay.saspay_transaction_id && (
+                          <span className="ml-1 font-mono text-[10px] opacity-60">
+                            · {pay.saspay_transaction_id.slice(0, 12)}…
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="font-bold">{formatCDF(pay.montant_cdf ?? 0)}</span>
+                      <span className={cn("px-2 py-0.5 rounded-full font-semibold text-[10px]", statusStyle)}>
+                        {statusLabel[pay.statut ?? ""] ?? pay.statut}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </section>
 
       {/* Déconnexion */}

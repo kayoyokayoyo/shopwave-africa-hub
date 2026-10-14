@@ -1,4 +1,5 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import crypto from "node:crypto";
 import {
   calculateSubscriptionDates,
   determineSubscriptionStatus,
@@ -6,6 +7,7 @@ import {
   identifyExcessItemsToPause,
   formatCDF,
 } from "../lib/subscriptions";
+import { verifySasPayWebhookSignature } from "../lib/saspay";
 
 describe("Système d'abonnements & Paiements - Partie 1/3", () => {
   describe("1. Renouvellement anticipé", () => {
@@ -164,4 +166,78 @@ describe("Système d'abonnements & Paiements - Partie 1/3", () => {
       expect(formatted.includes("FC") || formatted.includes("CDF")).toBe(true);
     });
   });
+
+  describe("5. Sécurité SasPay - Signature Webhook (Partie 2/3)", () => {
+    const originalSecret = process.env["SASPAY_WEBHOOK_SECRET"];
+    const testSecret = "whsec_test_secret_for_vitest_123456789";
+
+    beforeEach(() => {
+      process.env["SASPAY_WEBHOOK_SECRET"] = testSecret;
+    });
+
+    afterEach(() => {
+      if (originalSecret !== undefined) {
+        process.env["SASPAY_WEBHOOK_SECRET"] = originalSecret;
+      } else {
+        delete process.env["SASPAY_WEBHOOK_SECRET"];
+      }
+    });
+
+    it("valide une signature HMAC-SHA256 valide", async () => {
+      const payload = JSON.stringify({
+        event: "payment.completed",
+        data: {
+          session_id: "sess_123",
+          status: "completed",
+        },
+      });
+
+      const validSignature = crypto
+        .createHmac("sha256", testSecret)
+        .update(payload, "utf8")
+        .digest("hex");
+
+      const isValid = await verifySasPayWebhookSignature(payload, validSignature);
+      expect(isValid).toBe(true);
+    });
+
+    it("valide une signature préfixée par 'sha256='", async () => {
+      const payload = JSON.stringify({ event: "payment.completed" });
+      const validSignature = crypto
+        .createHmac("sha256", testSecret)
+        .update(payload, "utf8")
+        .digest("hex");
+
+      const isValid = await verifySasPayWebhookSignature(payload, `sha256=${validSignature}`);
+      expect(isValid).toBe(true);
+    });
+
+    it("rejette une signature altérée", async () => {
+      const payload = JSON.stringify({ event: "payment.completed" });
+      const fakeSignature = "0000000000000000000000000000000000000000000000000000000000000000";
+
+      const isValid = await verifySasPayWebhookSignature(payload, fakeSignature);
+      expect(isValid).toBe(false);
+    });
+
+    it("rejette si le corps a été modifié après signature", async () => {
+      const originalPayload = JSON.stringify({ event: "payment.completed", amount: "10000" });
+      const tamperedPayload = JSON.stringify({ event: "payment.completed", amount: "50000" });
+
+      const signature = crypto
+        .createHmac("sha256", testSecret)
+        .update(originalPayload, "utf8")
+        .digest("hex");
+
+      const isValid = await verifySasPayWebhookSignature(tamperedPayload, signature);
+      expect(isValid).toBe(false);
+    });
+
+    it("retourne false sans crash si la clé secrète webhook est absente", async () => {
+      delete process.env["SASPAY_WEBHOOK_SECRET"];
+      const isValid = await verifySasPayWebhookSignature("{}", "abc");
+      expect(isValid).toBe(false);
+    });
+  });
 });
+

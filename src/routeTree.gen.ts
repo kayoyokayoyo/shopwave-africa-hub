@@ -19,6 +19,7 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
+import { Route as AbonnementRetourRouteImport } from './routes/abonnement.retour'
 import { Route as BSlugRouteImport } from './routes/b.$slug'
 import { Route as AuthenticatedAdminIndexRouteImport } from './routes/_authenticated/admin.index'
 import { Route as AuthenticatedAdminBoutiquesRouteImport } from './routes/_authenticated/admin.boutiques'
@@ -88,6 +89,11 @@ const AuthenticatedOnboardingRoute = AuthenticatedOnboardingRouteImport.update({
   id: '/onboarding',
   path: '/onboarding',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AbonnementRetourRoute = AbonnementRetourRouteImport.update({
+  id: '/abonnement/retour',
+  path: '/abonnement/retour',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BSlugRoute = BSlugRouteImport.update({
   id: '/b/$slug',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AuthenticatedAdminRouteWithChildren
   '/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/abonnement/retour': typeof AbonnementRetourRoute
   '/b/$slug': typeof BSlugRouteWithChildren
   '/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
   '/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/reset-password': typeof ResetPasswordRoute
   '/terms': typeof TermsRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
+  '/abonnement/retour': typeof AbonnementRetourRoute
   '/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
   '/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/_authenticated/admin': typeof AuthenticatedAdminRouteWithChildren
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRouteWithChildren
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
+  '/abonnement/retour': typeof AbonnementRetourRoute
   '/b/$slug': typeof BSlugRouteWithChildren
   '/_authenticated/admin/boutiques': typeof AuthenticatedAdminBoutiquesRoute
   '/_authenticated/admin/commercants': typeof AuthenticatedAdminCommercantsRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/onboarding'
+    | '/abonnement/retour'
     | '/b/$slug'
     | '/admin/boutiques'
     | '/admin/commercants'
@@ -336,6 +346,7 @@ export interface FileRouteTypes {
     | '/reset-password'
     | '/terms'
     | '/onboarding'
+    | '/abonnement/retour'
     | '/admin/boutiques'
     | '/admin/commercants'
     | '/admin/paiements'
@@ -367,6 +378,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin'
     | '/_authenticated/dashboard'
     | '/_authenticated/onboarding'
+    | '/abonnement/retour'
     | '/b/$slug'
     | '/_authenticated/admin/boutiques'
     | '/_authenticated/admin/commercants'
@@ -397,6 +409,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   TermsRoute: typeof TermsRoute
+  AbonnementRetourRoute: typeof AbonnementRetourRoute
   BSlugRoute: typeof BSlugRouteWithChildren
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
 }
@@ -472,6 +485,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/onboarding'
       preLoaderRoute: typeof AuthenticatedOnboardingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/abonnement/retour': {
+      id: '/abonnement/retour'
+      path: '/abonnement/retour'
+      fullPath: '/abonnement/retour'
+      preLoaderRoute: typeof AbonnementRetourRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/b/$slug': {
       id: '/b/$slug'
@@ -707,6 +727,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   TermsRoute: TermsRoute,
+  AbonnementRetourRoute: AbonnementRetourRoute,
   BSlugRoute: BSlugRouteWithChildren,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
 }
