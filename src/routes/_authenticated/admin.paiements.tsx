@@ -26,29 +26,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Switch } from "@/components/ui/switch";
 import {
   CreditCard,
   CheckCircle2,
   XCircle,
-  Clock,
-  AlertTriangle,
-  RefreshCw,
-  Search,
-  Filter,
-  DollarSign,
+  Activity,
   Plus,
   Eye,
-  Activity,
-  Layers,
   Store,
-  ExternalLink,
   ShieldCheck,
   ShieldAlert,
+  Search,
 } from "lucide-react";
 import {
-  getPlanPrices,
-  adminUpdatePlanPrice,
   adminGetPayments,
   adminReviewPayment,
   adminAssignPlan,
@@ -95,7 +85,7 @@ function statusColor(status: string | null) {
 
 function AdminPaymentsPage() {
   const qc = useQueryClient();
-  const [activeTab, setActiveTab] = useState<"payments" | "prices" | "events">("payments");
+  const [activeTab, setActiveTab] = useState<"payments" | "events">("payments");
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedPayment, setSelectedPayment] = useState<any | null>(null);
@@ -113,21 +103,14 @@ function AdminPaymentsPage() {
 
   // Server functions
   const fetchPaymentsFn = useServerFn(adminGetPayments);
-  const fetchPricesFn = useServerFn(getPlanPrices);
   const fetchEventsFn = useServerFn(adminGetPaymentEvents);
   const reviewPaymentFn = useServerFn(adminReviewPayment);
-  const updatePriceFn = useServerFn(adminUpdatePlanPrice);
   const assignPlanFn = useServerFn(adminAssignPlan);
 
   // Queries
   const paymentsQuery = useQuery({
     queryKey: ["admin-subscription-payments", statusFilter],
     queryFn: () => fetchPaymentsFn({ data: { statut: statusFilter } }),
-  });
-
-  const pricesQuery = useQuery({
-    queryKey: ["admin-plan-prices"],
-    queryFn: () => fetchPricesFn(),
   });
 
   const eventsQuery = useQuery({
@@ -233,14 +216,10 @@ function AdminPaymentsPage() {
 
       {/* Tabs navigation */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-6">
-        <TabsList className="bg-muted/60 p-1 rounded-2xl h-11 w-full sm:w-auto grid grid-cols-3 sm:inline-flex">
+        <TabsList className="bg-muted/60 p-1 rounded-2xl h-11 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
           <TabsTrigger value="payments" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <CreditCard className="h-4 w-4" />
             <span>Paiements</span>
-          </TabsTrigger>
-          <TabsTrigger value="prices" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
-            <DollarSign className="h-4 w-4" />
-            <span>Tarifs ($ USD)</span>
           </TabsTrigger>
           <TabsTrigger value="events" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <Activity className="h-4 w-4" />
@@ -396,26 +375,7 @@ function AdminPaymentsPage() {
           )}
         </TabsContent>
 
-        {/* ── TAB 2: TARIFS DES PLANS (USD) ─────────────────────────────────── */}
-        <TabsContent value="prices" className="space-y-6 m-0">
-          <div className="rounded-2xl border bg-card p-5 space-y-2">
-            <h3 className="font-extrabold text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" /> Grille Tarifaire en Dollars ($ USD)
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              Ces prix sont utilisés lors de la génération des liens de paiement et des renouvellements.
-              Aucun prix n'est codé en dur : vous pouvez les modifier en temps réel.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {(pricesQuery.data ?? []).map((price) => (
-              <PlanPriceCard key={price.id} item={price} onSave={pricesQuery.refetch} updateFn={updatePriceFn} />
-            ))}
-          </div>
-        </TabsContent>
-
-        {/* ── TAB 3: JOURNAL DES WEBHOOKS ──────────────────────────────────── */}
+        {/* ── TAB 2: JOURNAL DES WEBHOOKS ──────────────────────────────────── */}
         <TabsContent value="events" className="space-y-4 m-0">
           <div className="rounded-2xl border bg-card p-5 space-y-1">
             <h3 className="font-extrabold text-base flex items-center gap-2">
@@ -711,85 +671,3 @@ function AdminPaymentsPage() {
   );
 }
 
-// ── COMPOSANT CARTE DE TARIF (PLAN_PRICES) ──────────────────────────────────
-
-function PlanPriceCard({
-  item,
-  onSave,
-  updateFn,
-}: {
-  item: any;
-  onSave: () => void;
-  updateFn: any;
-}) {
-  const [priceUsd, setPriceUsd] = useState(String(item.price_usd ?? item.price_cdf ?? 0));
-  const [isActive, setIsActive] = useState(Boolean(item.is_active));
-  const [saving, setSaving] = useState(false);
-
-  async function handleSave() {
-    const val = Number(priceUsd);
-    if (isNaN(val) || val < 0) return toast.error("Montant USD invalide");
-    setSaving(true);
-    try {
-      await updateFn({
-        data: {
-          id: item.id,
-          price_usd: val,
-          is_active: isActive,
-        },
-      });
-      toast.success(`Tarif mis à jour : ${item.plan_id} (${item.period}) — ${val} $`);
-      onSave();
-    } catch (err: any) {
-      toast.error(err.message || "Erreur de mise à jour");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="rounded-2xl border bg-card p-5 space-y-4 shadow-sm flex flex-col justify-between">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <span className="font-black text-lg uppercase tracking-wide text-foreground">
-            Plan {item.plan_id}
-          </span>
-          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary capitalize">
-            {item.period}
-          </span>
-        </div>
-
-        <div className="space-y-1.5 pt-2">
-          <Label className="text-xs text-muted-foreground">Prix en Dollars ($ USD)</Label>
-          <div className="relative">
-            <Input
-              type="number"
-              min="0"
-              step="1"
-              value={priceUsd}
-              onChange={(e) => setPriceUsd(e.target.value)}
-              className="h-10 rounded-xl pr-12 font-bold text-base"
-            />
-            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-              $
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs font-medium text-muted-foreground">Actif à la vente</span>
-          <Switch checked={isActive} onCheckedChange={setIsActive} />
-        </div>
-      </div>
-
-      <Button
-        size="sm"
-        onClick={handleSave}
-        disabled={saving}
-        className="w-full rounded-xl font-bold h-9 mt-2"
-      >
-        {saving ? "Enregistrement…" : "Enregistrer ce tarif"}
-      </Button>
-    </div>
-  );
-}
