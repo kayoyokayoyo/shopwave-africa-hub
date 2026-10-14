@@ -62,6 +62,18 @@ export interface SasPayWebhookPayload {
   };
 }
 
+function unwrapSasPayResponse(payload: unknown): SasPayCheckoutResponse | null {
+  if (!payload || typeof payload !== "object") return null;
+
+  const envelope = payload as Record<string, unknown>;
+  const data = envelope.data && typeof envelope.data === "object"
+    ? (envelope.data as Record<string, unknown>)
+    : envelope;
+
+  if (typeof data.id !== "string" || typeof data.checkout_url !== "string") return null;
+  return data as unknown as SasPayCheckoutResponse;
+}
+
 // ── Fonctions ─────────────────────────────────────────────────────────────────
 
 /**
@@ -95,7 +107,8 @@ export async function createSasPayCheckout(
     try {
       const body = await response.json();
       // Ne pas logger le corps complet car il peut contenir des infos sensibles
-      detail = body?.detail || body?.message || body?.error || JSON.stringify(body);
+      const errorDetail = body?.detail ?? body?.message ?? body?.error ?? body;
+      detail = typeof errorDetail === "string" ? errorDetail : JSON.stringify(errorDetail);
     } catch {
       detail = `HTTP ${response.status}`;
     }
@@ -105,15 +118,25 @@ export async function createSasPayCheckout(
     );
   }
 
-  const data = await response.json();
-  if (!data?.id || !data?.checkout_url) {
-    console.error("[SasPay] Réponse inattendue (id ou checkout_url manquant)");
+  const payload: unknown = await response.json();
+  const data = unwrapSasPayResponse(payload);
+  if (!data) {
+    const envelope = payload && typeof payload === "object"
+      ? (payload as Record<string, unknown>)
+      : {};
+    const nestedData = envelope.data && typeof envelope.data === "object"
+      ? (envelope.data as Record<string, unknown>)
+      : null;
+    console.error("[SasPay] Réponse inattendue, champs reçus :", {
+      topLevel: Object.keys(envelope),
+      data: nestedData ? Object.keys(nestedData) : null,
+    });
     throw new Error(
       "La passerelle de paiement a renvoyé une réponse incomplète. Contactez le support."
     );
   }
 
-  return data as SasPayCheckoutResponse;
+  return data;
 }
 
 /**
@@ -133,7 +156,7 @@ export async function getSasPayCheckoutSession(
       },
     });
     if (!res.ok) return null;
-    return (await res.json()) as SasPayCheckoutResponse;
+    return unwrapSasPayResponse(await res.json());
   } catch (err) {
     console.error("[SasPay] Erreur récupération session:", err);
     return null;
