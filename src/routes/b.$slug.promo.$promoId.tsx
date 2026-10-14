@@ -1,27 +1,62 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { ArrowLeft, ShoppingBag, Store, Calendar, Check, AlertCircle } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { publicShopQuery } from "@/lib/storefront.query";
 import { StoreHeader, ProductCard } from "@/components/store/StoreParts";
 import { PromoSlide } from "@/components/promo/PromoSlide";
 import { useCart } from "@/components/store/cart";
-import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
+import { absoluteMediaUrl, formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 import { Button } from "@/components/ui/button";
 import { trackPromo } from "@/components/promo/PromoBanner";
 
 export const Route = createFileRoute("/b/$slug/promo/$promoId")({
-  head: ({ params }) => ({
-    meta: [
-      { title: `Promotion exclusive — MarketNet` },
-      { name: "description", content: "Découvrez notre sélection de produits en promotion." },
-      { property: "og:title", content: "Promotion exclusive" },
-      { property: "og:description", content: "Offre spéciale disponible sur notre boutique en ligne." },
+  loader: async ({ context, params }) => {
+    const d = await context.queryClient.ensureQueryData(publicShopQuery(params.slug));
+    const promo = (d.promos ?? []).find((p: any) => p.id === params.promoId) ?? null;
+    return { shop: d.shop, promo, origin: d.origin };
+  },
+  head: ({ loaderData }) => {
+    if (!loaderData) return { meta: [{ title: "Promotion — MarketNet" }] };
+    const { shop, promo, origin } = loaderData;
+
+    const promoTitle = promo?.title
+      ? `${promo.title} — ${shop.name}`
+      : `Promotion exclusive chez ${shop.name}`;
+    const promoDesc = promo?.description?.slice(0, 160)
+      || `Offre spéciale disponible sur la boutique ${shop.name}. Commandez maintenant sur WhatsApp.`;
+
+    // Priorité image : image de la promo > bannière boutique > logo boutique
+    const coverPath = promo?.image_url || shop.banner_url || shop.logo_url;
+    const ogImage = absoluteMediaUrl(coverPath, origin);
+    const promoUrl = `${origin}/b/${shop.slug}/promo/${promo?.id ?? ""}`;
+
+    const meta: Record<string, string>[] = [
+      { title: promoTitle },
+      { name: "description", content: promoDesc },
+      { property: "og:site_name", content: "MarketNet" },
+      { property: "og:title", content: promoTitle },
+      { property: "og:description", content: promoDesc },
       { property: "og:type", content: "website" },
-    ],
-  }),
+      { property: "og:url", content: promoUrl },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: promoTitle },
+      { name: "twitter:description", content: promoDesc },
+    ];
+
+    if (ogImage) {
+      meta.push(
+        { property: "og:image", content: ogImage },
+        { property: "og:image:alt", content: promoTitle },
+        { name: "twitter:image", content: ogImage },
+      );
+    }
+
+    return { meta };
+  },
   component: DedicatedPromoPage,
 });
+
 
 function DedicatedPromoPage() {
   const { slug, promoId } = Route.useParams();
