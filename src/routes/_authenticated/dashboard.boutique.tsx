@@ -11,6 +11,16 @@ import { IdentityFields, ContactFields, AppearanceFields, type ShopDraft } from 
 import { ShopPreview } from "@/components/dashboard/ShopPreview";
 import { draftFromShop, draftToRow, validateDraft, friendlyDbError } from "@/lib/shopDraft";
 import { Palette, Info, Phone, Eye, Check, Loader2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard/boutique")({
   head: () => ({ meta: [{ title: "Ma boutique — MarketNet" }, { name: "description", content: "Personnalisez votre boutique." }, { property: "og:title", content: "Ma boutique — MarketNet" }, { property: "og:description", content: "Personnalisation de la boutique." }] }),
@@ -24,20 +34,29 @@ function ShopSettings() {
   const qc = useQueryClient();
   const [draft, setDraft] = useState<ShopDraft | null>(null);
   const [busy, setBusy] = useState(false);
+  const [confirmSlugChange, setConfirmSlugChange] = useState(false);
   useEffect(() => { if (shop) setDraft(draftFromShop(shop)); }, [shop]);
   if (!shop || !draft) return null;
   const set = (p: Partial<ShopDraft>) => setDraft((d) => (d ? { ...d, ...p } : d));
 
-  async function save() {
-    const err = validateDraft(draft!);
-    if (err) return toast.error(err);
-    if (draft!.slug !== shop!.slug && !confirm("Le lien ne pourra plus être modifié ensuite. Continuer ?")) return;
+  async function performSave() {
+    setConfirmSlugChange(false);
     setBusy(true);
     const { error } = await supabase.from("shops").update(draftToRow(draft!)).eq("id", shop!.id);
     setBusy(false);
     if (error) return toast.error(friendlyDbError(error.message));
     qc.invalidateQueries({ queryKey: ["myShop"] });
     toast.success("Modifications enregistrées");
+  }
+
+  async function save() {
+    const err = validateDraft(draft!);
+    if (err) return toast.error(err);
+    if (draft!.slug !== shop!.slug) {
+      setConfirmSlugChange(true);
+      return;
+    }
+    await performSave();
   }
 
   async function togglePublished(v: boolean) {
@@ -136,6 +155,26 @@ function ShopSettings() {
       <div className="hidden lg:sticky lg:top-20 lg:block lg:self-start">
         <ShopPreview draft={draft} products={products} promotions={promotions} />
       </div>
+
+      <AlertDialog open={confirmSlugChange} onOpenChange={setConfirmSlugChange}>
+        <AlertDialogContent className="rounded-3xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold">Modifier le lien de votre boutique ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Le lien personnalisé ne pourra plus être modifié ensuite. Vos clients devront utiliser cette nouvelle adresse pour accéder à votre boutique.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={performSave}
+              className="rounded-xl"
+            >
+              Confirmer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

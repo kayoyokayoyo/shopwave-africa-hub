@@ -41,6 +41,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatPrice, mediaUrl } from "@/lib/marketnet";
 import { compressAndUpload } from "@/lib/upload";
 import { cloudinaryUploadSignature } from "@/lib/cloudinary.functions";
@@ -103,6 +113,7 @@ function PromotionsPage() {
   const { data: products } = useShopProducts(shop?.id);
   const qc = useQueryClient();
   const [form, setForm] = useState<FormState | null>(null);
+  const [promoToDelete, setPromoToDelete] = useState<string | null>(null);
 
   // Fetch shop plan
   const { data: plan } = useQuery({
@@ -123,7 +134,7 @@ function PromotionsPage() {
         .from("promotions")
         .select(`
           *,
-          promotion_products (product_id, position, discount_type, discount_value)
+          promotion_products!promotion_products_promotion_id_fkey (product_id, position, discount_type, discount_value)
         `)
         .eq("shop_id", shop!.id)
         .order("position", { ascending: true })
@@ -149,11 +160,14 @@ function PromotionsPage() {
         }
       }
 
-      return (promos ?? []).map((p) => ({
-        ...p,
-        products: (p.promotion_products ?? []).sort((a, b) => a.position - b.position),
-        stats: eventCounts[p.id] || { views: 0, clicks: 0 },
-      })) as PromotionWithProducts[];
+      return (promos ?? []).map((p) => {
+        const { promotion_products, ...restPromo } = p as any;
+        return {
+          ...restPromo,
+          products: (promotion_products ?? []).sort((a: any, b: any) => a.position - b.position),
+          stats: eventCounts[p.id] || { views: 0, clicks: 0 },
+        };
+      }) as PromotionWithProducts[];
     },
   });
 
@@ -212,23 +226,34 @@ function PromotionsPage() {
   }
 
   async function duplicatePromo(p: PromotionWithProducts) {
-    const { id, created_at, updated_at, products: pProducts, stats, ...rest } = p;
+    const promoRow = {
+      shop_id: p.shop_id,
+      title: `${p.title} (Copie)`.slice(0, 80),
+      description: p.description,
+      image_url: p.image_url,
+      template: p.template,
+      discount_type: p.discount_type,
+      discount_value: p.discount_value,
+      badge_label: p.badge_label,
+      button_label: p.button_label,
+      starts_at: p.starts_at,
+      ends_at: p.ends_at,
+      is_hidden: p.is_hidden ?? false,
+      status: "draft",
+      position: promotions?.length ?? 0,
+    };
+
     const { data: newPromo, error } = await supabase
       .from("promotions")
-      .insert({
-        ...rest,
-        title: `${p.title} (Copie)`.slice(0, 80),
-        status: "draft",
-        position: (promotions?.length ?? 0),
-      })
+      .insert(promoRow)
       .select()
       .single();
 
     if (error) return toast.error(error.message);
 
-    if (pProducts.length > 0) {
-      await supabase.from("promotion_products").insert(
-        pProducts.map((pp) => ({
+    if (p.products && p.products.length > 0) {
+      const { error: ppErr } = await supabase.from("promotion_products").insert(
+        p.products.map((pp) => ({
           promotion_id: newPromo.id,
           product_id: pp.product_id,
           position: pp.position,
@@ -236,14 +261,20 @@ function PromotionsPage() {
           discount_value: pp.discount_value,
         }))
       );
+      if (ppErr) {
+        toast.error(ppErr.message);
+        return;
+      }
     }
 
     toast.success("Promotion dupliquée");
     qc.invalidateQueries({ queryKey: ["promotions", shop?.id] });
   }
 
-  async function deletePromo(id: string) {
-    if (!confirm("Supprimer cette promotion ?")) return;
+  async function confirmDeletePromo() {
+    if (!promoToDelete) return;
+    const id = promoToDelete;
+    setPromoToDelete(null);
     const { error } = await supabase.from("promotions").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Promotion supprimée");
@@ -456,7 +487,7 @@ function PromotionsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => deletePromo(p.id)}
+                    onClick={() => setPromoToDelete(p.id)}
                     className="rounded-xl h-8 px-2 text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     title="Supprimer"
                   >
@@ -487,6 +518,26 @@ function PromotionsPage() {
           )}
         </SheetContent>
       </Sheet>
+      {/* Confirmation Suppression Promotion */}
+      <AlertDialog open={!!promoToDelete} onOpenChange={(open) => !open && setPromoToDelete(null)}>
+        <AlertDialogContent className="rounded-3xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold">Supprimer cette promotion ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. La bannière promotionnelle et ses statistiques seront définitivement supprimées.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmDeletePromo}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

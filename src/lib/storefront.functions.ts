@@ -22,7 +22,7 @@ export const getPublicShop = createServerFn({ method: "GET" })
       sb.from("product_categories").select("id,name,position").eq("shop_id", shop.id).order("position"),
       sb.from("promotions").select(`
         id, title, description, badge_label, image_url, template, discount_type, discount_value, button_label, starts_at, ends_at, position,
-        promotion_products (product_id, position, discount_type, discount_value)
+        promotion_products!promotion_products_promotion_id_fkey (product_id, position, discount_type, discount_value)
       `).eq("shop_id", shop.id).eq("status", "published").eq("is_hidden", false).order("position"),
     ]);
 

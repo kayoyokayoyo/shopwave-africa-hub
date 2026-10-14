@@ -10,6 +10,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useMyShop, useShopProducts, type Product } from "@/hooks/useMyShop";
 import { formatPrice, mediaUrl } from "@/lib/marketnet";
 import {
@@ -52,6 +62,7 @@ function MetaPage() {
   const disconnectFn = useServerFn(metaDisconnect);
   const refreshFn = useServerFn(metaRefreshStats);
   const [busy, setBusy] = useState(false);
+  const [confirmDisconnect, setConfirmDisconnect] = useState(false);
   const exchanged = useRef(false);
   const autoRefreshed = useRef(false);
 
@@ -357,7 +368,7 @@ function MetaPage() {
                 <Button
                   variant="outline" size="sm" className="rounded-xl text-destructive hover:text-destructive hover:bg-destructive/5"
                   disabled={busy}
-                  onClick={() => { if (confirm("Deconnecter Facebook et Instagram ?")) run(() => disconnectFn(), "Deconnecte"); }}
+                  onClick={() => setConfirmDisconnect(true)}
                 >
                   <Unplug className="h-3.5 w-3.5" />Deconnecter
                 </Button>
@@ -392,8 +403,8 @@ function MetaPage() {
                 <div className="rounded-3xl border border-dashed bg-muted/30 p-10 text-center">
                   <p className="text-sm text-muted-foreground">
                     {(products ?? []).some((product) => product.status !== "hidden")
-                      ? "Tous vos produits disponibles ont déjÃ  été publiés. Consultez les résultats des publications ci-dessous."
-                      : "Aucun produit Ã  publier. Ajoutez d'abord des produits depuis l'onglet Produits."}
+                      ? "Tous vos produits disponibles ont déjà été publiés. Consultez les résultats des publications ci-dessous."
+                      : "Aucun produit à publier. Ajoutez d'abord des produits depuis l'onglet Produits."}
                   </p>
                 </div>
               )}
@@ -493,6 +504,29 @@ function MetaPage() {
           </p>
         </>
       )}
+
+      <AlertDialog open={confirmDisconnect} onOpenChange={setConfirmDisconnect}>
+        <AlertDialogContent className="rounded-3xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold">Déconnecter Meta ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              La liaison avec vos pages Facebook et Instagram sera interrompue. Vous pourrez vous reconnecter à tout moment.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDisconnect(false);
+                run(() => disconnectFn(), "Déconnecté");
+              }}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Déconnecter
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

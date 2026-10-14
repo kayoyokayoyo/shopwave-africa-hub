@@ -55,7 +55,7 @@ export function useShopPromotions(shopId?: string) {
         .from("promotions")
         .select(`
           id, title, description, badge_label, image_url, template, discount_type, discount_value, button_label, starts_at, ends_at, position,
-          promotion_products (product_id)
+          promotion_products!promotion_products_promotion_id_fkey (product_id)
         `)
         .eq("shop_id", shopId!)
         .eq("status", "published")

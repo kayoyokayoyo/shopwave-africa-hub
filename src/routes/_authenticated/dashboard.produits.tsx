@@ -12,6 +12,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 import { compressAndUpload } from "@/lib/upload";
 import { cloudinaryUploadSignature } from "@/lib/cloudinary.functions";
@@ -113,6 +123,7 @@ function ProductForm({ initial, shopId, categories, onDone }: { initial: Form; s
   const [f, setF] = useState<Form>(initial);
   const [uploading, setUploading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const signUpload = useServerFn(cloudinaryUploadSignature);
   const set = (p: Partial<Form>) => setF((x) => ({ ...x, ...p }));
   const sel = "flex h-12 w-full rounded-xl border border-input bg-card px-3 text-sm";
@@ -149,8 +160,10 @@ function ProductForm({ initial, shopId, categories, onDone }: { initial: Form; s
   }
 
   async function remove() {
-    if (!f.id || !confirm("Supprimer ce produit ?")) return;
+    if (!f.id) return;
+    setConfirmDelete(false);
     await supabase.from("products").delete().eq("id", f.id);
+    toast.success("Produit supprimé");
     onDone(false);
   }
 
@@ -202,8 +215,28 @@ function ProductForm({ initial, shopId, categories, onDone }: { initial: Form; s
       <div className="flex flex-col gap-2 pt-2">
         <Button variant="hero" size="lg" onClick={() => save(false)} disabled={busy || uploading}>Enregistrer</Button>
         {!f.id && <Button variant="outline" size="lg" onClick={() => save(true)} disabled={busy || uploading}>Enregistrer et ajouter un autre</Button>}
-        {f.id && <Button variant="ghost" className="text-destructive" onClick={remove}><Trash2 />Supprimer</Button>}
+        {f.id && <Button variant="ghost" className="text-destructive" onClick={() => setConfirmDelete(true)}><Trash2 />Supprimer</Button>}
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent className="rounded-3xl max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg font-bold">Supprimer ce produit ?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Cette action est irréversible. Le produit sera définitivement retiré de votre boutique.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="rounded-xl">Annuler</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={remove}
+              className="rounded-xl bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Supprimer
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
