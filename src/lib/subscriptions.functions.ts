@@ -668,6 +668,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         plan_id: input.planId,
         period: input.period,
         currency: "USD",
+        amount: amountUsd,
         montant_usd: amountUsd,
         montant_cdf: amountCdf,
         statut: "en_attente",
@@ -677,7 +678,22 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       .single();
 
     if (insertError || !payment) {
-      throw new Error("Impossible de créer l'enregistrement de paiement.");
+      console.error("[Subscriptions] Échec de création du paiement :", {
+        code: insertError?.code,
+        message: insertError?.message,
+        details: insertError?.details,
+        hint: insertError?.hint,
+      });
+
+      if (insertError?.code === "23502" || insertError?.code === "23514") {
+        throw new Error(
+          "Le schéma de la base de données des paiements doit être mis à jour. Appliquez les migrations Supabase puis réessayez.",
+        );
+      }
+
+      throw new Error(
+        "Impossible de créer l'enregistrement de paiement. Consultez les journaux serveur.",
+      );
     }
 
     const amountText = amountUsd.toFixed(2);

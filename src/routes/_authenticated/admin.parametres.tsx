@@ -172,33 +172,51 @@ function Settings() {
               </div>
             </TabsContent>
 
-            <TabsContent value="billing" className="mt-4 outline-none">
+            <TabsContent value="billing" className="mt-4 outline-none space-y-4">
+              {/* Carte statut SasPay */}
               <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
                 <div className="border-b bg-muted/10 px-6 py-5 flex items-center gap-3">
-                  <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-600"><CreditCard className="h-5 w-5" /></div>
+                  <div className="rounded-lg bg-primary/10 p-2 text-primary"><CreditCard className="h-5 w-5" /></div>
                   <div>
-                    <h2 className="font-semibold">Paiements Mobile Money</h2>
-                    <p className="text-xs text-muted-foreground">Consignes affichees aux commercants pour le paiement de leur abonnement.</p>
+                    <h2 className="font-semibold">Passerelle de paiement — SasPay</h2>
+                    <p className="text-xs text-muted-foreground">Les abonnements sont collectés automatiquement en USD via SasPay.</p>
                   </div>
                 </div>
                 <div className="p-6 space-y-4">
-                  <div className="space-y-2">
-                    <Label>Instructions de paiement M-Pesa / Orange Money</Label>
-                    <Textarea 
-                      rows={5} 
-                      className={textareaClass("billing")}
-                      value={form.payment_instructions} 
-                      onChange={e => setForm({...form, payment_instructions: e.target.value})} 
-                      placeholder="Ex: Veuillez envoyer le montant exact au numero..." 
-                      readOnly={editingTab !== "billing"}
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="rounded-xl border bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-100 dark:border-emerald-900/40 p-4 flex flex-col gap-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Environnement</span>
+                      <span className="text-base font-black text-emerald-800 dark:text-emerald-300">Production (Live)</span>
+                      <span className="text-[11px] text-muted-foreground">Paiements réels activés</span>
+                    </div>
+                    <div className="rounded-xl border bg-muted/30 p-4 flex flex-col gap-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Devise</span>
+                      <span className="text-base font-black">USD ($)</span>
+                      <span className="text-[11px] text-muted-foreground">Dollar américain uniquement</span>
+                    </div>
+                    <div className="rounded-xl border bg-muted/30 p-4 flex flex-col gap-1">
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Webhook</span>
+                      <span className="text-base font-black truncate text-xs font-mono">/api/public/webhook-saspay</span>
+                      <span className="text-[11px] text-muted-foreground">Activation automatique</span>
+                    </div>
                   </div>
-                  <div className="flex justify-end pt-2 border-t border-dashed mt-4">
-                    {renderActionButtons("billing", ["payment_instructions"])}
+
+                  <div className="rounded-xl border bg-amber-50/60 dark:bg-amber-950/20 border-amber-100 dark:border-amber-900/30 p-4 text-xs text-amber-800 dark:text-amber-300 flex gap-2 items-start">
+                    <span className="mt-0.5">⚙️</span>
+                    <span>Pour modifier les clés API SasPay ou l'URL du webhook, mettez à jour les variables d'environnement <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">SASPAY_SECRET_KEY</code> et <code className="font-mono bg-amber-100 dark:bg-amber-900/40 px-1 rounded">SASPAY_WEBHOOK_SECRET</code> dans Vercel.</span>
+                  </div>
+
+                  <div className="flex justify-end border-t border-dashed pt-4">
+                    <a href="https://dashboard.saspay.com" target="_blank" rel="noreferrer">
+                      <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 h-10 text-sm font-bold text-primary-foreground shadow-sm hover:bg-primary/90 transition-colors">
+                        <CreditCard className="h-4 w-4" /> Tableau de bord SasPay
+                      </button>
+                    </a>
                   </div>
                 </div>
               </div>
             </TabsContent>
+
 
             <TabsContent value="integrations" className="mt-4 outline-none">
               <div className="rounded-2xl border bg-card overflow-hidden shadow-sm">
