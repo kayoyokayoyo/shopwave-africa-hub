@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import type { ComponentType } from "react";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import {
@@ -22,8 +22,22 @@ import {
   MessageCircle,
   BarChart3,
   Palette,
+  ChevronLeft,
+  ChevronRight,
+  XCircle,
+  ExternalLink,
+  Eye,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useMyShop } from "@/hooks/useMyShop";
 import {
   getMerchantSubscription,
@@ -123,6 +137,10 @@ export const Route = createFileRoute("/_authenticated/dashboard/abonnement")({
   component: DashboardAbonnementPage,
 });
 
+const ITEMS_PER_PAGE = 5;
+
+type HistoryFilter = "all" | "payé" | "en_attente" | "échoué";
+
 function DashboardAbonnementPage() {
   const { data: shop } = useMyShop();
   const navigate = useNavigate();
@@ -130,32 +148,37 @@ function DashboardAbonnementPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<SubscriptionPeriod>("mensuel");
   const [payingPlanId, setPayingPlanId] = useState<string | null>(null);
 
+  // Pagination et filtres de l'historique
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedReceipt, setSelectedReceipt] = useState<any | null>(null);
+
   const getLimitsFn = useServerFn(getMerchantSubscription);
   const getPaymentsFn = useServerFn(getMerchantPayments);
   const getPricesFn = useServerFn(getPlanPrices);
   const createCheckoutFn = useServerFn(createCheckoutSession);
 
   // Données de l'abonnement
-  const { data: subLimits, isLoading: limitsLoading } = useQuery({
+  const { data: subLimits, isLoading: limitsLoading, refetch: refetchLimits } = useQuery({
     queryKey: ["subscription-limits", shop?.id],
     enabled: !!shop?.id,
     queryFn: () => getLimitsFn({ data: { shopId: shop!.id } }),
   });
 
   // Historique des paiements
-  const { data: paymentHistory, isLoading: paymentsLoading } = useQuery({
+  const { data: paymentHistory, isLoading: paymentsLoading, refetch: refetchPayments, isFetching: paymentsFetching } = useQuery({
     queryKey: ["merchant-payments", shop?.id],
     enabled: !!shop?.id,
     queryFn: () => getPaymentsFn({ data: { shopId: shop!.id } }),
   });
 
-  // Tarifs CDF depuis la base de données (jamais codés en dur)
+  // Tarifs depuis la base de données
   const { data: planPrices, isLoading: pricesLoading } = useQuery({
     queryKey: ["plan-prices"],
     queryFn: () => getPricesFn(),
   });
 
-  // Plans actifs depuis la base de données — JAMAIS codés en dur
+  // Plans actifs depuis la base de données
   const { data: dbPlans, isLoading: plansLoading } = useQuery({
     queryKey: ["plans-active"],
     queryFn: async () => {
@@ -163,11 +186,11 @@ function DashboardAbonnementPage() {
         .from("plans")
         .select("*")
         .eq("active", true)
-        .order("position");
-      if (error) throw new Error(error.message);
+        .order("price_usd", { ascending: true });
+      if (error) throw error;
       return data ?? [];
     },
-    staleTime: 5 * 60 * 1000, // 5 min de cache
+    staleTime: 5 * 60 * 1000,
   });
 
   // Lancement du paiement SasPay
@@ -205,9 +228,60 @@ function DashboardAbonnementPage() {
   const isGrace = subLimits?.is_grace_period;
   const isExpired = subLimits?.status === "expiré";
 
+  // Résolution précise et robuste du statut (priorité à statut sur le legacy status)
+  function resolvePaymentStatus(pay: any): "payé" | "en_attente" | "échoué" | "annulé" {
+    if (pay.statut === "payé" || pay.status === "approved") return "payé";
+    if (pay.statut === "échoué" || pay.status === "rejected") return "échoué";
+    if (pay.statut === "annulé") return "annulé";
+    if (pay.statut === "expiré") return "échoué";
+    if (pay.statut === "en_attente" || pay.statut === "à_vérifier") return "en_attente";
+    if (!pay.statut && pay.status === "pending") return "en_attente";
+    return "échoué";
+  }
+
+  // Traitement et pagination de l'historique
+  const allHistory = useMemo(() => paymentHistory ?? [], [paymentHistory]);
+
+  const historyCounts = useMemo(() => {
+    let paye = 0;
+    let enAttente = 0;
+    let echoue = 0;
+
+    for (const p of allHistory) {
+      const st = resolvePaymentStatus(p);
+      if (st === "payé") paye++;
+      else if (st === "en_attente") enAttente++;
+      else echoue++;
+    }
+
+    return {
+      all: allHistory.length,
+      payé: paye,
+      en_attente: enAttente,
+      échoué: echoue,
+    };
+  }, [allHistory]);
+
+  const filteredHistory = useMemo(() => {
+    return allHistory.filter((pay) => {
+      if (historyFilter === "all") return true;
+      const st = resolvePaymentStatus(pay);
+      if (historyFilter === "payé") return st === "payé";
+      if (historyFilter === "en_attente") return st === "en_attente";
+      if (historyFilter === "échoué") return st === "échoué" || st === "annulé";
+      return true;
+    });
+  }, [allHistory, historyFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredHistory.length / ITEMS_PER_PAGE));
+  const paginatedHistory = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredHistory.slice(start, start + ITEMS_PER_PAGE);
+  }, [filteredHistory, currentPage]);
+
   return (
     <div className="mx-auto max-w-4xl space-y-8 pb-16">
-      {/* En-tête */}
+      {/* ── En-tête ──────────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold mb-2">
@@ -221,7 +295,7 @@ function DashboardAbonnementPage() {
         </div>
       </div>
 
-      {/* Alertes de renouvellement et de période de grâce */}
+      {/* ── Alertes de renouvellement et de période de grâce ─────────────── */}
       {subLimits?.reminder_level === "7_days" && !isGrace && (
         <div className="flex items-center gap-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-4 text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
           <Clock className="h-5 w-5 shrink-0 text-amber-600" />
@@ -266,10 +340,9 @@ function DashboardAbonnementPage() {
         </div>
       )}
 
-      {/* Carte du Plan Actuel */}
-      <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
+      {/* ── Carte de la Formule Active ────────────────────────────────────── */}
+      <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-5">
         {limitsLoading ? (
-          /* Skeleton : rien de fictif n'est jamais affiché */
           <div className="animate-pulse space-y-4">
             <div className="flex items-center justify-between border-b pb-4">
               <div className="space-y-2">
@@ -315,9 +388,9 @@ function DashboardAbonnementPage() {
               </div>
 
               {subLimits?.ends_at && currentPlanId !== "free" && (
-                <div className="text-left sm:text-right">
-                  <p className="text-xs text-muted-foreground">Date d'échéance :</p>
-                  <p className="text-xs sm:text-sm font-bold">
+                <div className="text-left sm:text-right bg-muted/30 px-3.5 py-2 rounded-2xl border">
+                  <p className="text-[11px] text-muted-foreground">Date d'échéance :</p>
+                  <p className="text-xs sm:text-sm font-bold text-foreground">
                     {new Date(subLimits.ends_at).toLocaleDateString("fr-FR", {
                       day: "numeric",
                       month: "long",
@@ -328,49 +401,49 @@ function DashboardAbonnementPage() {
               )}
             </div>
 
-            {/* Détail des quotas — uniquement quand subLimits est chargé */}
+            {/* Quotas & fonctionnalités de la formule */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground mb-3">Limites de votre boutique :</p>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Limites incluses dans votre formule :</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                <div className="rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Package className="h-3.5 w-3.5" />
+                    <Package className="h-3.5 w-3.5 text-primary" />
                     <span>Catalogue</span>
                   </div>
-                  <p className="font-extrabold text-sm sm:text-base">
-                    {subLimits.max_products != null ? `${subLimits.max_products} max` : "Illimité"}
+                  <p className="font-extrabold text-sm sm:text-base text-foreground">
+                    {subLimits?.max_products != null ? `${subLimits.max_products} max` : "Illimité"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                <div className="rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Camera className="h-3.5 w-3.5" />
+                    <Camera className="h-3.5 w-3.5 text-primary" />
                     <span>Photos / produit</span>
                   </div>
-                  <p className="font-extrabold text-sm sm:text-base">
-                    {subLimits.max_photos}
+                  <p className="font-extrabold text-sm sm:text-base text-foreground">
+                    {subLimits?.max_photos}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                <div className="rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Tag className="h-3.5 w-3.5" />
+                    <Tag className="h-3.5 w-3.5 text-primary" />
                     <span>Promotions</span>
                   </div>
-                  <p className="font-extrabold text-sm sm:text-base">
-                    {subLimits.max_active_promotions != null
+                  <p className="font-extrabold text-sm sm:text-base text-foreground">
+                    {subLimits?.max_active_promotions != null
                       ? `${subLimits.max_active_promotions} active(s)`
                       : "Illimitées"}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                <div className="rounded-2xl border bg-muted/20 hover:bg-muted/30 transition-colors p-3.5 space-y-1.5">
                   <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <Share2 className="h-3.5 w-3.5" />
+                    <Share2 className="h-3.5 w-3.5 text-primary" />
                     <span>Meta Ads</span>
                   </div>
-                  <p className="font-extrabold text-sm sm:text-base">
-                    {subLimits.meta_access ? "Inclus" : "Non inclus"}
+                  <p className="font-extrabold text-sm sm:text-base text-foreground">
+                    {subLimits?.meta_access ? "Inclus" : "Non inclus"}
                   </p>
                 </div>
               </div>
@@ -379,7 +452,7 @@ function DashboardAbonnementPage() {
         )}
       </section>
 
-      {/* Grille des Formules Disponibles */}
+      {/* ── Grille des Formules Disponibles ───────────────────────────────── */}
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -408,10 +481,9 @@ function DashboardAbonnementPage() {
           </div>
         </div>
 
-        {/* Cartes de plans — 100% dynamiques depuis la table `plans` */}
+        {/* Cartes de plans — dynamiques depuis DB */}
         <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
           {(plansLoading || pricesLoading) ? (
-            // Skeletons pendant le chargement — rien de codé en dur n'est jamais affiché
             <>
               <PlanCardSkeleton />
               <PlanCardSkeleton />
@@ -432,7 +504,7 @@ function DashboardAbonnementPage() {
                 <div
                   key={plan.id}
                   className={cn(
-                    "rounded-3xl border bg-card p-5 sm:p-6 space-y-4 flex flex-col justify-between",
+                    "rounded-3xl border bg-card p-5 sm:p-6 space-y-4 flex flex-col justify-between transition-all",
                     isPro
                       ? "border-2 border-primary/50 shadow-md relative overflow-hidden"
                       : plan.id === "business"
@@ -482,7 +554,7 @@ function DashboardAbonnementPage() {
                       )}
                     </div>
 
-                    {/* Features 100% dynamiques */}
+                    {/* Features dynamiques */}
                     <ul className="space-y-2 pt-2 border-t text-xs text-muted-foreground">
                       {features.map((f) => (
                         <li key={f.text} className="flex items-center gap-2">
@@ -519,7 +591,7 @@ function DashboardAbonnementPage() {
           )}
         </div>
 
-        {/* Note sur les frais */}
+        {/* Note de réassurance */}
         <div className="rounded-2xl border bg-muted/20 p-4 text-xs text-muted-foreground flex items-start gap-2.5">
           <Shield className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
           <p className="leading-relaxed">
@@ -528,93 +600,227 @@ function DashboardAbonnementPage() {
         </div>
       </section>
 
-      {/* Historique des Paiements */}
+      {/* ── Historique des Paiements avec Pagination ─────────────────────── */}
       <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b pb-3">
-          <div className="flex items-center gap-2 font-bold text-sm sm:text-base">
-            <Receipt className="h-4 w-4 text-primary" />
-            <span>Historique de vos paiements</span>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <Receipt className="h-4 w-4" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base">Historique de vos paiements</h3>
+              <p className="text-xs text-muted-foreground">
+                Consultez vos transactions, reçus et l'état de vos règlements SasPay.
+              </p>
+            </div>
           </div>
-          {paymentHistory && paymentHistory.length > 0 && (
-            <span className="text-xs text-muted-foreground">{paymentHistory.length} transaction(s)</span>
-          )}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void refetchPayments()}
+            disabled={paymentsFetching}
+            className="h-8 rounded-xl px-2.5 text-xs text-muted-foreground self-start sm:self-center"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", paymentsFetching && "animate-spin")} />
+            Actualiser
+          </Button>
         </div>
 
-        {paymentsLoading ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-primary" />
-            Chargement de l'historique…
+        {/* Filtres rapides par pilules */}
+        {allHistory.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+            {(
+              [
+                { id: "all", label: "Toutes", count: historyCounts.all },
+                { id: "payé", label: "Payées", count: historyCounts.payé },
+                { id: "en_attente", label: "En attente", count: historyCounts.en_attente },
+                { id: "échoué", label: "Échouées / Annulées", count: historyCounts.échoué },
+              ] as { id: HistoryFilter; label: string; count: number }[]
+            ).map((filter) => (
+              <button
+                key={filter.id}
+                onClick={() => {
+                  setHistoryFilter(filter.id);
+                  setCurrentPage(1);
+                }}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap transition-colors border",
+                  historyFilter === filter.id
+                    ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                    : "bg-muted/40 text-muted-foreground border-border hover:bg-muted"
+                )}
+              >
+                <span>{filter.label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 py-0.2 text-[10px] font-bold",
+                    historyFilter === filter.id
+                      ? "bg-primary-foreground/20 text-primary-foreground"
+                      : "bg-muted text-foreground/70"
+                  )}
+                >
+                  {filter.count}
+                </span>
+              </button>
+            ))}
           </div>
-        ) : !paymentHistory || paymentHistory.length === 0 ? (
-          <div className="py-8 text-center text-xs text-muted-foreground">
-            Aucun historique de paiement pour l'instant.
+        )}
+
+        {/* Contenu de la liste */}
+        {paymentsLoading ? (
+          <div className="py-12 text-center text-xs text-muted-foreground space-y-2">
+            <Loader2 className="h-5 w-5 animate-spin mx-auto text-primary" />
+            <p>Chargement de l'historique…</p>
+          </div>
+        ) : allHistory.length === 0 ? (
+          <div className="py-12 text-center text-xs text-muted-foreground space-y-2">
+            <Receipt className="h-8 w-8 mx-auto opacity-20" />
+            <p className="font-semibold text-sm text-foreground">Aucun paiement effectué</p>
+            <p>Vos reçus et transactions SasPay s'afficheront ici après votre premier règlement.</p>
+          </div>
+        ) : filteredHistory.length === 0 ? (
+          <div className="py-10 text-center text-xs text-muted-foreground space-y-2">
+            <p className="font-medium text-foreground">Aucune transaction pour ce filtre</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setHistoryFilter("all");
+                setCurrentPage(1);
+              }}
+              className="rounded-xl text-xs h-8"
+            >
+              Afficher toutes les transactions
+            </Button>
           </div>
         ) : (
-          <div className="divide-y rounded-2xl border overflow-hidden">
-            {paymentHistory.map((pay) => {
-              const statusStyle =
-                pay.statut === "payé"
-                  ? "text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border-emerald-500/20"
-                  : pay.statut === "en_attente" || pay.statut === "à_vérifier"
-                  ? "text-amber-700 dark:text-amber-300 bg-amber-500/10 border-amber-500/20"
-                  : "text-red-700 dark:text-red-300 bg-red-500/10 border-red-500/20";
+          <div className="space-y-3">
+            <div className="divide-y divide-border rounded-2xl border overflow-hidden bg-card">
+              {paginatedHistory.map((pay) => {
+                const status = resolvePaymentStatus(pay);
+                const amountUSD = Number(pay.montant_usd ?? pay.montant_cdf ?? pay.amount ?? 0);
 
-              const statusLabel: Record<string, string> = {
-                payé: "Payé",
-                en_attente: "En attente",
-                à_vérifier: "À vérifier",
-                échoué: "Échoué",
-                annulé: "Annulé",
-                expiré: "Expiré",
-              };
+                const statusConfig = {
+                  payé: {
+                    label: "Payé",
+                    style: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20",
+                    icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
+                    bg: "bg-emerald-500/10",
+                  },
+                  en_attente: {
+                    label: "En attente",
+                    style: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20",
+                    icon: <Clock className="h-4 w-4 text-amber-600 animate-pulse" />,
+                    bg: "bg-amber-500/10",
+                  },
+                  annulé: {
+                    label: "Annulé",
+                    style: "bg-muted text-muted-foreground border-border",
+                    icon: <XCircle className="h-4 w-4 text-muted-foreground" />,
+                    bg: "bg-muted",
+                  },
+                  échoué: {
+                    label: "Échoué",
+                    style: "bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20",
+                    icon: <XCircle className="h-4 w-4 text-rose-600" />,
+                    bg: "bg-rose-500/10",
+                  },
+                }[status];
 
-              return (
-                <div key={pay.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 text-xs hover:bg-muted/30 transition-colors">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm capitalize">
-                        Plan {pay.plan_id} ({pay.period || "mensuel"})
-                      </span>
-                      <span className={cn("px-2.5 py-0.5 rounded-full font-bold text-[10px] border", statusStyle)}>
-                        {statusLabel[pay.statut ?? ""] ?? pay.statut}
-                      </span>
-                    </div>
-                    <p className="text-muted-foreground flex flex-wrap items-center gap-2">
-                      <span>
-                        {new Date(pay.cree_le ?? "").toLocaleDateString("fr-FR", {
-                          day: "numeric",
-                          month: "long",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                      {pay.saspay_transaction_id && (
-                        <span className="font-mono text-[10px] opacity-75">
-                          · Réf: {pay.saspay_transaction_id}
-                        </span>
-                      )}
-                    </p>
-                  </div>
+                return (
+                  <div
+                    key={pay.id}
+                    className="flex items-center justify-between p-4 sm:p-5 hover:bg-muted/20 transition-colors gap-3"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className={cn("h-8 w-8 rounded-xl flex items-center justify-center shrink-0", statusConfig.bg)}>
+                        {statusConfig.icon}
+                      </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
-                    <div className="text-left sm:text-right">
-                      <p className="font-extrabold text-sm">{formatUSD(pay.montant_usd ?? pay.montant_cdf ?? 0)}</p>
-                      {pay.frais != null && pay.frais > 0 && (
-                        <p className="text-[10px] text-muted-foreground">
-                          + {formatUSD(pay.frais)} frais
+                      <div className="space-y-0.5 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-sm text-foreground capitalize truncate">
+                            Plan {pay.plan_id}
+                          </span>
+                          <span className="text-xs text-muted-foreground capitalize">
+                            · {pay.period || "mensuel"}
+                          </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {new Date(pay.cree_le ?? "").toLocaleDateString("fr-FR", {
+                            day: "numeric",
+                            month: "short",
+                            year: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
                         </p>
-                      )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 text-right">
+                      <div>
+                        <p className="font-black text-sm text-foreground">{formatUSD(amountUSD)}</p>
+                        <span className={cn("inline-block text-[10px] font-bold px-2 py-0.5 rounded-full border", statusConfig.style)}>
+                          {statusConfig.label}
+                        </span>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setSelectedReceipt(pay)}
+                        className="h-8 w-8 p-0 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted"
+                        title="Consulter les détails"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
+                );
+              })}
+            </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between pt-2 px-1 text-xs text-muted-foreground">
+                <span className="text-[11px]">
+                  Affichage {((currentPage - 1) * ITEMS_PER_PAGE) + 1} à {Math.min(currentPage * ITEMS_PER_PAGE, filteredHistory.length)} sur {filteredHistory.length} transaction(s)
+                </span>
+
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="h-8 rounded-xl px-2.5 text-xs gap-1"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" /> Précédent
+                  </Button>
+
+                  <span className="px-2 font-bold text-foreground text-xs">
+                    {currentPage} / {totalPages}
+                  </span>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="h-8 rounded-xl px-2.5 text-xs gap-1"
+                  >
+                    Suivant <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              );
-            })}
+              </div>
+            )}
           </div>
         )}
       </section>
 
-      {/* FAQ Facturation */}
+      {/* ── FAQ Facturation ──────────────────────────────────────────────── */}
       <section className="rounded-3xl border bg-muted/20 p-5 sm:p-6 space-y-4">
         <div className="flex items-center gap-2 font-bold text-sm">
           <HelpCircle className="h-4 w-4 text-primary" />
@@ -640,6 +846,89 @@ function DashboardAbonnementPage() {
           </div>
         </div>
       </section>
+
+      {/* ── Modale Reçu / Détail de Paiement ─────────────────────────────── */}
+      <Dialog open={!!selectedReceipt} onOpenChange={(o) => !o && setSelectedReceipt(null)}>
+        <DialogContent className="max-w-md rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold flex items-center gap-2">
+              <Receipt className="h-5 w-5 text-primary" /> Reçu de paiement
+            </DialogTitle>
+            <DialogDescription>
+              Réf transaction : <span className="font-mono text-xs">{selectedReceipt?.id}</span>
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedReceipt && (
+            <div className="space-y-3 py-2 text-xs">
+              <div className="p-4 rounded-2xl bg-muted/40 border space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Formule</span>
+                  <span className="font-bold uppercase text-foreground">
+                    Plan {selectedReceipt.plan_id} ({selectedReceipt.period || "mensuel"})
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Statut</span>
+                  <span className="font-bold capitalize text-foreground">
+                    {selectedReceipt.statut || selectedReceipt.status}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground">Date d'initiation</span>
+                  <span>{new Date(selectedReceipt.cree_le || selectedReceipt.created_at).toLocaleString("fr-FR")}</span>
+                </div>
+                {selectedReceipt.paye_le && (
+                  <div className="flex justify-between items-center text-emerald-600 font-semibold">
+                    <span>Payé le</span>
+                    <span>{new Date(selectedReceipt.paye_le).toLocaleString("fr-FR")}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="p-4 rounded-2xl border space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Montant formule :</span>
+                  <span className="font-bold text-foreground">
+                    {formatUSD(Number(selectedReceipt.montant_usd ?? selectedReceipt.montant_cdf ?? selectedReceipt.amount ?? 0))}
+                  </span>
+                </div>
+                {selectedReceipt.frais != null && (
+                  <div className="flex justify-between text-muted-foreground">
+                    <span>Frais réseau :</span>
+                    <span>{formatUSD(selectedReceipt.frais)}</span>
+                  </div>
+                )}
+                {selectedReceipt.saspay_transaction_id && (
+                  <div className="flex justify-between pt-1 border-t text-[11px]">
+                    <span className="text-muted-foreground">ID Transaction SasPay :</span>
+                    <span className="font-mono">{selectedReceipt.saspay_transaction_id}</span>
+                  </div>
+                )}
+              </div>
+
+              {selectedReceipt.checkout_url && selectedReceipt.statut === "en_attente" && (
+                <div className="pt-2">
+                  <Button
+                    className="w-full rounded-xl font-bold gap-2"
+                    onClick={() => {
+                      window.location.href = selectedReceipt.checkout_url;
+                    }}
+                  >
+                    Procéder au paiement sur SasPay <ExternalLink className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSelectedReceipt(null)} className="rounded-xl">
+              Fermer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
