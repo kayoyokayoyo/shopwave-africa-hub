@@ -456,22 +456,28 @@ function DashboardAbonnementPage() {
                       <span className="font-extrabold text-lg">{plan.name}</span>
                     </div>
 
-                    {/* Prix — depuis plan_prices uniquement */}
+                    {/* Prix — depuis plan_prices ou directement depuis le plan configuré */}
                     <div>
                       {isFree ? (
                         <>
                           <span className="text-3xl font-black">0 CDF</span>
                           <span className="text-xs text-muted-foreground ml-1">/toujours</span>
                         </>
-                      ) : price ? (
+                      ) : (price != null || plan.price_usd != null) ? (
                         <>
-                          <span className="text-3xl font-black">{formatCDF(price.price_cdf)}</span>
+                          <span className="text-3xl font-black">
+                            {formatCDF(
+                              price?.price_cdf ??
+                                (selectedPeriod === "mensuel"
+                                  ? (plan.price_usd ?? 0)
+                                  : (plan.price_usd ?? 0) * 10)
+                            )}
+                          </span>
                           <span className="text-xs text-muted-foreground ml-1">
                             /{selectedPeriod === "mensuel" ? "mois" : "an"}
                           </span>
                         </>
                       ) : (
-                        // Tarif non disponible pour cette période, pas de texte codé en dur
                         <span className="text-sm text-muted-foreground italic">Tarif non disponible</span>
                       )}
                     </div>

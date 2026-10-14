@@ -111,6 +111,8 @@ function PlanEditor({ plan }: { plan: Plan }) {
       await logAction("plan.update", p.id, { price: p.price_usd, max_products: p.max_products });
       toast.success("Plan '" + p.name + "' mis a jour"); 
       qc.invalidateQueries({ queryKey: ["plans"] });
+      qc.invalidateQueries({ queryKey: ["plans-active"] });
+      qc.invalidateQueries({ queryKey: ["plan-prices"] });
       setIsEditing(false);
     } catch (cause) {
       toast.error(cause instanceof Error ? cause.message : "Erreur de sauvegarde");

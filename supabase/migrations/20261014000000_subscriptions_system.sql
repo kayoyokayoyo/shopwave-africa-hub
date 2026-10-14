@@ -32,17 +32,35 @@ create policy "plan_prices admin" on public.plan_prices
   using (public.has_role(auth.uid(), 'admin'))
   with check (public.has_role(auth.uid(), 'admin'));
 
--- Tarifs par défaut en CDF pour les plans existants
+-- Synchronisation des tarifs depuis les plans configurés par l'admin (aucune valeur fictive en dur)
 insert into public.plan_prices (plan_id, period, price_cdf, is_active)
-values
-  ('free', 'mensuel', 0, true),
-  ('free', 'annuel', 0, true),
-  ('pro', 'mensuel', 25000, true),
-  ('pro', 'annuel', 250000, true),
-  ('business', 'mensuel', 70000, true),
-  ('business', 'annuel', 700000, true)
+select id, 'mensuel', coalesce(price_usd, 0), coalesce(active, true) from public.plans
 on conflict (plan_id, period) do update
 set price_cdf = excluded.price_cdf, is_active = excluded.is_active;
+
+insert into public.plan_prices (plan_id, period, price_cdf, is_active)
+select id, 'annuel', coalesce(price_usd * 10, 0), coalesce(active, true) from public.plans
+on conflict (plan_id, period) do update
+set price_cdf = excluded.price_cdf, is_active = excluded.is_active;
+
+-- Trigger pour synchroniser automatiquement plan_prices dès que l'admin modifie un plan
+create or replace function public.sync_plan_prices_from_plans()
+returns trigger as $$
+begin
+  insert into public.plan_prices (plan_id, period, price_cdf, is_active)
+  values
+    (new.id, 'mensuel', coalesce(new.price_usd, 0), coalesce(new.active, true)),
+    (new.id, 'annuel', coalesce(new.price_usd * 10, 0), coalesce(new.active, true))
+  on conflict (plan_id, period) do update
+  set price_cdf = excluded.price_cdf, is_active = excluded.is_active, updated_at = now();
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists trg_sync_plan_prices on public.plans;
+create trigger trg_sync_plan_prices
+after insert or update of price_usd, active on public.plans
+for each row execute function public.sync_plan_prices_from_plans();
 
 -- ============================================================================
 -- 2. TABLE: subscription_payments (Évolution / compatibilité complète)

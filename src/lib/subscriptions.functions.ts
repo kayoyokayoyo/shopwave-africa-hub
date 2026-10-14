@@ -594,7 +594,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       throw new Error("Impossible de récupérer l'adresse e-mail du compte.");
     }
 
-    // 3. Récupérer le prix depuis plan_prices (jamais depuis le navigateur)
+    // 3. Récupérer le prix depuis plan_prices ou directement depuis le plan configuré par l'admin
     const { data: planPrice } = await sb
       .from("plan_prices")
       .select("price_cdf, is_active")
@@ -603,7 +603,22 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       .eq("is_active", true)
       .maybeSingle();
 
-    if (!planPrice) {
+    let amountCdf: number | undefined = planPrice?.price_cdf != null ? Number(planPrice.price_cdf) : undefined;
+
+    if (amountCdf == null) {
+      // Fallback sécurisé : lire directement le prix configuré sur le plan
+      const { data: planRow } = await sb
+        .from("plans")
+        .select("price_usd, active")
+        .eq("id", input.planId)
+        .maybeSingle();
+
+      if (planRow && planRow.price_usd != null && planRow.active) {
+        amountCdf = input.period === "mensuel" ? Number(planRow.price_usd) : Number(planRow.price_usd) * 10;
+      }
+    }
+
+    if (amountCdf == null || amountCdf <= 0) {
       throw new Error(
         `Aucun tarif actif trouvé pour le plan ${planLabel} (${input.period}). Contactez l'administration.`
       );
@@ -641,7 +656,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         shop_id: input.shopId,
         plan_id: input.planId,
         period: input.period,
-        montant_cdf: planPrice.price_cdf,
+        montant_cdf: amountCdf,
         statut: "en_attente",
         methode: "saspay",
       })
@@ -652,7 +667,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       throw new Error("Impossible de créer l'enregistrement de paiement.");
     }
 
-    const amountText = planPrice.price_cdf.toFixed(2);
+    const amountText = amountCdf.toFixed(2);
     const periodLabel = input.period === "mensuel" ? "mensuel" : "annuel";
     const description = `Abonnement MarketNet : ${planLabel} ${periodLabel}`;
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h
