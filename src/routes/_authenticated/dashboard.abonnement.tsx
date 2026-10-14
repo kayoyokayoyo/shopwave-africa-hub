@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { ComponentType } from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -18,6 +19,9 @@ import {
   Camera,
   Tag,
   Share2,
+  MessageCircle,
+  BarChart3,
+  Palette,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyShop } from "@/hooks/useMyShop";
@@ -30,6 +34,84 @@ import {
 import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+
+/** Génère dynamiquement la liste des features d'un plan depuis ses colonnes DB */
+function buildPlanFeatures(p: {
+  max_products: number | null;
+  max_photos: number | null;
+  max_active_promotions: number | null;
+  meta_access: boolean;
+  advanced_themes: boolean;
+  advanced_stats: boolean;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+}): { text: string; icon: ComponentType<any>; strong?: boolean }[] {
+  const features: { text: string; icon: ComponentType<any>; strong?: boolean }[] = [];
+
+  // Produits
+  features.push({
+    icon: Package,
+    strong: true,
+    text: p.max_products != null
+      ? `Jusqu'à ${p.max_products} produits`
+      : "Produits illimités",
+  });
+
+  // Photos
+  features.push({
+    icon: Camera,
+    text: `${p.max_photos ?? 3} photos par produit`,
+  });
+
+  // WhatsApp (toujours inclus)
+  features.push({
+    icon: MessageCircle,
+    text: "Commandes directes WhatsApp",
+  });
+
+  // Promotions
+  if (p.max_active_promotions === 0) {
+    features.push({ icon: Tag, text: "0 promotion incluse" });
+  } else if (p.max_active_promotions != null) {
+    features.push({ icon: Tag, text: `${p.max_active_promotions} promotion(s) active(s)` });
+  } else {
+    features.push({ icon: Tag, text: "Promotions actives illimitées" });
+  }
+
+  // Meta Ads
+  if (p.meta_access) {
+    features.push({ icon: Share2, text: "Accès complet Meta Ads (Facebook & Instagram)" });
+  }
+
+  // Thèmes premium
+  if (p.advanced_themes) {
+    features.push({ icon: Palette, text: "Templates & thèmes premium" });
+  }
+
+  // Statistiques avancées
+  if (p.advanced_stats) {
+    features.push({ icon: BarChart3, text: "Statistiques de ventes avancées" });
+  }
+
+  return features;
+}
+
+/** Squelette de chargement d'une carte plan */
+function PlanCardSkeleton() {
+  return (
+    <div className="rounded-3xl border bg-card p-5 sm:p-6 space-y-4 animate-pulse">
+      <div className="h-5 w-24 rounded-full bg-muted" />
+      <div className="h-8 w-32 rounded-lg bg-muted" />
+      <div className="h-3 w-full rounded bg-muted" />
+      <div className="space-y-2 pt-2 border-t">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="h-3 rounded bg-muted" style={{ width: `${60 + i * 10}%` }} />
+        ))}
+      </div>
+      <div className="h-10 rounded-xl bg-muted" />
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/dashboard/abonnement")({
   head: () => ({
@@ -73,8 +155,23 @@ function DashboardAbonnementPage() {
     queryFn: () => getPricesFn(),
   });
 
+  // Plans actifs depuis la base de données — JAMAIS codés en dur
+  const { data: dbPlans, isLoading: plansLoading } = useQuery({
+    queryKey: ["plans-active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("plans")
+        .select("*")
+        .eq("active", true)
+        .order("position");
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 min de cache
+  });
+
   // Lancement du paiement SasPay
-  async function handlePay(planId: "pro" | "business") {
+  async function handlePay(planId: string) {
     if (!shop?.id) return;
     setPayingPlanId(planId);
     try {
@@ -285,191 +382,109 @@ function DashboardAbonnementPage() {
           </div>
         </div>
 
-        {/* 3 Cartes : Gratuit, Pro, Business */}
+        {/* Cartes de plans — 100% dynamiques depuis la table `plans` */}
         <div className="grid md:grid-cols-3 gap-4 sm:gap-6">
-          {/* 1. Gratuit */}
-          <div className="rounded-3xl border bg-card p-5 sm:p-6 space-y-4 flex flex-col justify-between">
-            <div className="space-y-3">
-              <span className="font-extrabold text-lg">Gratuit</span>
-              <div>
-                <span className="text-3xl font-black">0 CDF</span>
-                <span className="text-xs text-muted-foreground ml-1">/toujours</span>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Idéal pour tester la plateforme et démarrer ses premières ventes.
-              </p>
-              <ul className="space-y-2 pt-2 border-t text-xs text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  Jusqu'à 10 produits
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  3 photos par produit
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                  Commandes directes WhatsApp
-                </li>
-                <li className="flex items-center gap-2 text-muted-foreground/60">
-                  <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/40 ml-1.5 mr-0.5" />
-                  0 promotion incluse
-                </li>
-              </ul>
-            </div>
+          {(plansLoading || pricesLoading) ? (
+            // Skeletons pendant le chargement — rien de codé en dur n'est jamais affiché
+            <>
+              <PlanCardSkeleton />
+              <PlanCardSkeleton />
+              <PlanCardSkeleton />
+            </>
+          ) : (
+            (dbPlans ?? []).map((plan) => {
+              const price = planPrices?.find(
+                (pp) => pp.plan_id === plan.id && pp.period === selectedPeriod
+              );
+              const isFree = plan.id === "free";
+              const isCurrent = currentPlanId === plan.id && !isExpired;
+              const isPaying = payingPlanId === plan.id;
+              const isPro = plan.id === "pro";
+              const features = buildPlanFeatures(plan);
 
-            <Button variant="outline" disabled className="w-full rounded-xl text-xs font-bold h-10">
-              {currentPlanId === "free" ? "Plan actuel" : "Inclus"}
-            </Button>
-          </div>
-
-          {/* 2. Pro */}
-          {(() => {
-            const planId = "pro" as const;
-            const price = planPrices?.find((pp) => pp.plan_id === planId && pp.period === selectedPeriod);
-            const isCurrent = currentPlanId === planId && !isExpired;
-            const isPaying = payingPlanId === planId;
-
-            return (
-              <div className="rounded-3xl border-2 border-primary/50 bg-card p-5 sm:p-6 space-y-4 flex flex-col justify-between shadow-md relative overflow-hidden">
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
-                  Recommandé
-                </div>
-
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                    <span className="font-extrabold text-lg">Pro</span>
-                  </div>
-
-                  <div>
-                    {price ? (
-                      <>
-                        <span className="text-3xl font-black">{formatCDF(price.price_cdf)}</span>
-                        <span className="text-xs text-muted-foreground ml-1">
-                          /{selectedPeriod === "mensuel" ? "mois" : "an"}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Chargement…</span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Pour les commerces en pleine expansion souhaitant un grand catalogue et des promotions.
-                  </p>
-
-                  <ul className="space-y-2 pt-2 border-t text-xs text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Jusqu'à 50 produits
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      5 photos par produit
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Promotions illimitées
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Statistiques de ventes avancées
-                    </li>
-                  </ul>
-                </div>
-
-                <Button
-                  className="w-full rounded-xl font-bold h-11 gap-2 shadow-md"
-                  disabled={!price || isPaying || !!payingPlanId}
-                  onClick={() => handlePay(planId)}
-                  variant={isCurrent ? "outline" : "default"}
-                >
-                  {isPaying ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Préparation…</>
-                  ) : isCurrent ? (
-                    <><ArrowRight className="h-4 w-4" /> Renouveler mon Pro</>
-                  ) : (
-                    <><ArrowRight className="h-4 w-4" /> Passer à Pro</>
+              return (
+                <div
+                  key={plan.id}
+                  className={cn(
+                    "rounded-3xl border bg-card p-5 sm:p-6 space-y-4 flex flex-col justify-between",
+                    isPro
+                      ? "border-2 border-primary/50 shadow-md relative overflow-hidden"
+                      : plan.id === "business"
+                      ? "bg-gradient-to-b from-primary/5 via-card to-card shadow-sm"
+                      : ""
                   )}
-                </Button>
-              </div>
-            );
-          })()}
-
-          {/* 3. Business */}
-          {(() => {
-            const planId = "business" as const;
-            const price = planPrices?.find((pp) => pp.plan_id === planId && pp.period === selectedPeriod);
-            const isCurrent = currentPlanId === planId && !isExpired;
-            const isPaying = payingPlanId === planId;
-
-            return (
-              <div className="rounded-3xl border bg-gradient-to-b from-primary/5 via-card to-card p-5 sm:p-6 space-y-4 flex flex-col justify-between shadow-sm">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Rocket className="h-4 w-4 text-primary" />
-                    <span className="font-extrabold text-lg">Business</span>
-                  </div>
-
-                  <div>
-                    {price ? (
-                      <>
-                        <span className="text-3xl font-black">{formatCDF(price.price_cdf)}</span>
-                        <span className="text-xs text-muted-foreground ml-1">
-                          /{selectedPeriod === "mensuel" ? "mois" : "an"}
-                        </span>
-                      </>
-                    ) : (
-                      <span className="text-sm text-muted-foreground">Chargement…</span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground">
-                    Catalogue illimité, synchronisation Meta Ads et support prioritaire.
-                  </p>
-
-                  <ul className="space-y-2 pt-2 border-t text-xs text-muted-foreground">
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      <strong>Produits illimités</strong>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      10 photos par produit
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Templates premium exclusifs
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Accès complet Meta Ads
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      Support prioritaire 7j/7
-                    </li>
-                  </ul>
-                </div>
-
-                <Button
-                  className="w-full rounded-xl font-bold h-11 gap-2"
-                  disabled={!price || isPaying || !!payingPlanId}
-                  onClick={() => handlePay(planId)}
-                  variant={isCurrent ? "outline" : "default"}
                 >
-                  {isPaying ? (
-                    <><Loader2 className="h-4 w-4 animate-spin" /> Préparation…</>
-                  ) : isCurrent ? (
-                    <><ArrowRight className="h-4 w-4" /> Renouveler Business</>
-                  ) : (
-                    <><ArrowRight className="h-4 w-4" /> Choisir Business</>
+                  {isPro && (
+                    <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-extrabold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                      Recommandé
+                    </div>
                   )}
-                </Button>
-              </div>
-            );
-          })()}
+
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      {isPro ? (
+                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                      ) : plan.id === "business" ? (
+                        <Rocket className="h-4 w-4 text-primary" />
+                      ) : null}
+                      <span className="font-extrabold text-lg">{plan.name}</span>
+                    </div>
+
+                    {/* Prix — depuis plan_prices uniquement */}
+                    <div>
+                      {isFree ? (
+                        <>
+                          <span className="text-3xl font-black">0 CDF</span>
+                          <span className="text-xs text-muted-foreground ml-1">/toujours</span>
+                        </>
+                      ) : price ? (
+                        <>
+                          <span className="text-3xl font-black">{formatCDF(price.price_cdf)}</span>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            /{selectedPeriod === "mensuel" ? "mois" : "an"}
+                          </span>
+                        </>
+                      ) : (
+                        // Tarif non disponible pour cette période, pas de texte codé en dur
+                        <span className="text-sm text-muted-foreground italic">Tarif non disponible</span>
+                      )}
+                    </div>
+
+                    {/* Features 100% dynamiques */}
+                    <ul className="space-y-2 pt-2 border-t text-xs text-muted-foreground">
+                      {features.map((f) => (
+                        <li key={f.text} className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          {f.strong ? <strong>{f.text}</strong> : f.text}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {isFree ? (
+                    <Button variant="outline" disabled className="w-full rounded-xl text-xs font-bold h-10">
+                      {currentPlanId === "free" ? "Plan actuel" : "Inclus"}
+                    </Button>
+                  ) : (
+                    <Button
+                      className={cn("w-full rounded-xl font-bold h-11 gap-2", isPro && "shadow-md")}
+                      disabled={!price || isPaying || !!payingPlanId}
+                      onClick={() => handlePay(plan.id)}
+                      variant={isCurrent ? "outline" : "default"}
+                    >
+                      {isPaying ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> Préparation…</>
+                      ) : isCurrent ? (
+                        <><ArrowRight className="h-4 w-4" /> Renouveler {plan.name}</>
+                      ) : (
+                        <><ArrowRight className="h-4 w-4" /> Passer à {plan.name}</>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* Note sur les frais */}

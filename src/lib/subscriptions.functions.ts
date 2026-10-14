@@ -149,8 +149,8 @@ export const getMerchantSubscription = createServerFn({ method: "GET" })
       name: "Gratuit",
       max_products: 10,
       max_photos: 3,
-      max_active_promotions: 0,
-      promo_templates: ["minimal"],
+      max_active_promotions: 1,
+      promo_templates: ["fullscreen", "split", "minimal"],
       meta_access: false,
       advanced_stats: false,
       advanced_themes: false,
@@ -548,12 +548,16 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
   .validator(
     z.object({
       shopId: z.string().uuid(),
-      planId: z.enum(["pro", "business"]),
+      planId: z.string().min(1),
       period: z.enum(["mensuel", "annuel"]),
     })
   )
   .handler(async ({ data: input, context }) => {
     const sb = supabaseAdmin;
+
+    if (input.planId === "free") {
+      throw new Error("Le plan gratuit ne nécessite aucun paiement.");
+    }
 
     // 1. Vérifier propriété de la boutique
     const { data: shop } = await sb
@@ -565,6 +569,15 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     if (!shop || shop.owner_id !== context.userId) {
       throw new Error("Boutique introuvable ou accès non autorisé.");
     }
+
+    // Récupérer les informations réelles du plan depuis la base de données
+    const { data: dbPlan } = await sb
+      .from("plans")
+      .select("id, name")
+      .eq("id", input.planId)
+      .maybeSingle();
+
+    const planLabel = dbPlan?.name || (input.planId.charAt(0).toUpperCase() + input.planId.slice(1));
 
     // 2. Récupérer l'email du compte
     const { data: userRecord } = await sb.auth.admin.getUserById(context.userId);
@@ -586,7 +599,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
 
     if (!planPrice) {
       throw new Error(
-        `Aucun tarif actif trouvé pour le plan ${input.planId} (${input.period}). Contactez l'administration.`
+        `Aucun tarif actif trouvé pour le plan ${planLabel} (${input.period}). Contactez l'administration.`
       );
     }
 
@@ -634,7 +647,6 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     }
 
     const amountText = planPrice.price_cdf.toFixed(2);
-    const planLabel = input.planId === "pro" ? "Pro" : "Business";
     const periodLabel = input.period === "mensuel" ? "mensuel" : "annuel";
     const description = `Abonnement MarketNet : ${planLabel} ${periodLabel}`;
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h
