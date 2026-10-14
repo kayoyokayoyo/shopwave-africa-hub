@@ -34,6 +34,7 @@ import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authen
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as AuthenticatedDashboardPromotionsRouteImport } from './routes/_authenticated/dashboard.promotions'
 import { Route as AuthenticatedDashboardReglagesRouteImport } from './routes/_authenticated/dashboard.reglages'
+import { Route as ApiPublicWebhookSaspayRouteImport } from './routes/api/public/webhook-saspay'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as AuthenticatedAdminBoutiquesShopIdRouteImport } from './routes/_authenticated/admin.boutiques_.$shopId'
 import { Route as AuthenticatedDashboardCommandesOrderIdRouteImport } from './routes/_authenticated/dashboard.commandes_.$orderId'
@@ -176,6 +177,11 @@ const AuthenticatedDashboardReglagesRoute =
     path: '/reglages',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const ApiPublicWebhookSaspayRoute = ApiPublicWebhookSaspayRouteImport.update({
+  id: '/api/public/webhook-saspay',
+  path: '/api/public/webhook-saspay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BSlugIndexRoute = BSlugIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -232,6 +238,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug': typeof BSlugIndexRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/_authenticated/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/api/public/webhook-saspay'
     | '/admin/'
     | '/dashboard/'
     | '/b/$slug/'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/api/public/webhook-saspay'
     | '/admin'
     | '/dashboard'
     | '/b/$slug'
@@ -391,6 +402,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/produits'
     | '/_authenticated/dashboard/promotions'
     | '/_authenticated/dashboard/reglages'
+    | '/api/public/webhook-saspay'
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
     | '/b/$slug/'
@@ -411,6 +423,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AbonnementRetourRoute: typeof AbonnementRetourRoute
   BSlugRoute: typeof BSlugRouteWithChildren
+  ApiPublicWebhookSaspayRoute: typeof ApiPublicWebhookSaspayRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
 }
 
@@ -591,6 +604,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardReglagesRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/api/public/webhook-saspay': {
+      id: '/api/public/webhook-saspay'
+      path: '/api/public/webhook-saspay'
+      fullPath: '/api/public/webhook-saspay'
+      preLoaderRoute: typeof ApiPublicWebhookSaspayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/b/$slug/': {
       id: '/b/$slug/'
       path: '/'
@@ -729,6 +749,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AbonnementRetourRoute: AbonnementRetourRoute,
   BSlugRoute: BSlugRouteWithChildren,
+  ApiPublicWebhookSaspayRoute: ApiPublicWebhookSaspayRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,
 }
 export const routeTree = rootRouteImport
