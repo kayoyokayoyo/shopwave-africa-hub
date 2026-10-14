@@ -361,5 +361,71 @@ Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, d�
 - **Responsive Design :** Amélioration de l'UX mobile sur les listes de produits avec l'adoption du mode `flex-col`, tronquant correctement les longs noms sans casser l'interface ni masquer les totaux.
 - **Template WhatsApp Épuré :** Suppression des liens web des produits et des champs redondants (numéro de téléphone) dans le message WhatsApp pour un rendu beaucoup plus professionnel et propre côté client.
 
+## Système d'Abonnements & Paiements SasPay (Intégration Complète)
+
+MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Business) couplé à la passerelle de paiement **SasPay** (Mobile Money & Cartes bancaires en RDC). L'implémentation est divisée en 3 volets sécurisés et indépendants :
+
+### 1. Données, Tarification et Logique Métier (Partie 1/3)
+
+- **Tables Supabase dédiées avec Row Level Security (RLS) :**
+  - `plan_prices` : Tarifs administrables en Francs Congolais (CDF) par plan et période (`mensuel` ou `annuel`). Les montants ne sont jamais codés en dur ni modifiables par le client.
+  - `subscription_payments` : Historique complet des demandes et transactions (`id`, `merchant_id`, `shop_id`, `plan_id`, `period`, `montant_cdf`, `statut`, `methode`, `saspay_session_id`, `checkout_url`, `saspay_transaction_id`, `montant_debite`, `montant_net`, `frais`, `cree_le`, `paye_le`, `admin_note`).
+  - `merchant_subscriptions` : Périodes actives des commerçants (`debut`, `fin`, `statut` : `actif`, `grâce`, `expiré`).
+  - `payment_events` : Journal d'audit immuable des webhooks bruts reçus avec statut de vérification de signature et résultat de traitement.
+- **Règles d'abonnement :**
+  - **Renouvellement anticipé :** Si un commerçant renouvelle avant échéance, la nouvelle période s'ajoute à la date de fin courante (aucun jour perdu).
+  - **Période de grâce de 7 jours :** À l'échéance, le statut passe en `grâce` sans interruption de service pendant 7 jours.
+  - **Rappels progressifs :** Des bandeaux discrets et préventifs s'affichent dans le dashboard à J-7, J-3 et pendant la période de grâce.
+  - **Rétrogradation douce :** À l'expiration définitive (après les 7 jours de grâce), la boutique bascule sur le plan Gratuit. Les produits au-delà de la limite gratuite (10) sont masqués automatiquement sans suppression, et les promotions actives sont mises en pause.
+
+### 2. Intégration SasPay & Expérience Commerçant (Partie 2/3)
+
+- **Variables d'environnement sécurisées (côté serveur uniquement) :**
+  ```dotenv
+  SASPAY_ENV=test                                 # test ou live
+  SASPAY_SECRET_KEY=sk_test_...                  # Clé secrète d'API SasPay
+  SASPAY_WEBHOOK_SECRET=whsec_...                # Secret de signature des webhooks
+  ```
+- **Création de Session (`createCheckoutSession`) :**
+  - Déduplication : si une demande `en_attente` identique existe depuis moins d'une heure, son `checkout_url` est réutilisé au lieu d'en créer une nouvelle.
+  - Les prix proviennent impérativement de `plan_prices` côté serveur.
+  - Appel de `POST https://api.saspay.me/api/v1/checkout-sessions/` avec nom de la boutique, e-mail et métadonnées de suivi.
+- **Interface dans Réglages (`/dashboard/reglages`) :**
+  - Sélecteur de période (mensuel ou annuel avec économie affichée).
+  - Cartes comparatives Pro et Business avec prix en CDF, liste des fonctionnalités et bouton de souscription/renouvellement.
+  - Avertissement clair sur les frais de passerelle.
+  - Tableau de l'historique des 5 derniers paiements avec statuts et références.
+- **Page de retour (`/abonnement/retour?ref=<paymentId>`) :**
+  - Polling automatique toutes les 3 secondes pendant 60 secondes maximum.
+  - États animés : vérification en cours, reçu de paiement détaillé (référence, montant facturé, montant débité, frais, date, ID de transaction), échec avec explication, ou délai dépassé avec possibilité de revérification.
+
+### 3. Webhook SasPay, Sécurité & Confidentialité (Partie 3/3)
+
+- **Route publique du Webhook :** `POST /api/public/webhook-saspay`
+- **Contrôles de sécurité stricts :**
+  - **Corps brut :** Lecture de la charge utile non modifiée via `request.text()`.
+  - **Tolérance d'horodatage :** Rejet HTTP 401 si `X-Webhook-Timestamp` s'écarte de plus de 5 minutes (300 secondes) de l'heure du serveur.
+  - **Signature HMAC-SHA256 :** Calcul en temps constant (`crypto.timingSafeEqual`) de `${timestamp}.${corpsBrut}` avec `SASPAY_WEBHOOK_SECRET`. Rejet 401 en cas d'invalidité.
+  - **Idempotence :** Déduplication par `transaction_id` et `type_evenement`. Un webhook réémis ne déclenche jamais une seconde prolongation.
+- **Gestion des Événements :**
+  - `transaction.success` (ou `payment.completed`) :
+    - Rapprochement via métadonnées, référence ou session distante.
+    - Contrôle que la devise est bien `CDF`.
+    - Contrôle que `amount` ou `net_amount` correspond au tarif du plan attendu (**jamais** `charged` seul car les frais s'y ajoutent).
+    - En cas d'incohérence, le paiement est marqué `à_vérifier` avec note explicative pour validation admin sans deviner.
+    - Si tout est conforme : mise à jour en `payé`, enregistrement des frais/nets et activation immédiate de l'abonnement.
+  - `transaction.failed` / `transaction.cancelled` : Mise à jour du statut en `échoué` ou `annulé`.
+  - `webhook.test`, `settlement.*`, `wallet_transfer.*` : Journalisés dans `payment_events` et acquittés sans action.
+- **Conformité & Politique de Confidentialité :**
+  - Mise à jour de `/privacy` : SasPay est formellement déclaré comme sous-traitant de paiement, avec transmission exclusive du nom commercial de la boutique et de l'e-mail du compte lors des transactions.
+
+### 4. Validation des Tests
+
+Le module d'abonnements et de paiements est couvert par **20 tests automatisés** exécutables via :
+```powershell
+npm test
+```
+
 
           🧡🤍💛🤍💛💗💓💞 MarketNet 
+
