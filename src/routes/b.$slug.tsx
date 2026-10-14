@@ -8,7 +8,7 @@ import { recordShopVisit } from "@/lib/storefront.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { CartProvider, useCart } from "@/components/store/cart";
 import { CartSheet } from "@/components/store/CartSheet";
-import { mediaUrl, shopStyle } from "@/lib/marketnet";
+import { absoluteMediaUrl, mediaUrl, shopStyle } from "@/lib/marketnet";
 
 export const Route = createFileRoute("/b/$slug")({
   loader: ({ context, params }) => context.queryClient.ensureQueryData(publicShopQuery(params.slug)),
@@ -17,14 +17,29 @@ export const Route = createFileRoute("/b/$slug")({
     const { shop, origin } = loaderData;
     const title = `${shop.name} — Boutique en ligne`;
     const desc = shop.description?.slice(0, 160) || `Découvrez les produits de ${shop.name} et commandez directement sur WhatsApp.`;
-    const img = shop.banner_url || shop.logo_url;
+    // Priorité : bannière > logo > rien
+    const coverPath = shop.banner_url || shop.logo_url;
+    const ogImage = absoluteMediaUrl(coverPath, origin);
+    const shopUrl = `${origin}/b/${shop.slug}`;
     const meta = [
-      { title }, { name: "description", content: desc },
-      { property: "og:title", content: title }, { property: "og:description", content: desc },
-      { property: "og:type", content: "website" }, { property: "og:url", content: `${origin}/b/${shop.slug}` },
+      { title },
+      { name: "description", content: desc },
+      { property: "og:site_name", content: "MarketNet" },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: shopUrl },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: desc },
     ];
-    if (img && origin) meta.push({ property: "og:image", content: `${origin}${mediaUrl(img)}` }, { name: "twitter:image", content: `${origin}${mediaUrl(img)}` });
+    if (ogImage) {
+      meta.push(
+        { property: "og:image", content: ogImage },
+        { property: "og:image:alt", content: `Logo de ${shop.name}` },
+        { name: "twitter:image", content: ogImage },
+      );
+    }
     return { meta };
   },
   component: ShopLayout,

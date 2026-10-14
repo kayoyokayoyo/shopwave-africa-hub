@@ -7,7 +7,7 @@ import { publicShopQuery } from "@/lib/storefront.query";
 import { useCart } from "@/components/store/cart";
 
 import { Button } from "@/components/ui/button";
-import { formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
+import { absoluteMediaUrl, formatPrice, mediaUrl, type Variant } from "@/lib/marketnet";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/b/$slug/p/$productId")({
@@ -22,12 +22,28 @@ export const Route = createFileRoute("/b/$slug/p/$productId")({
     const { product, shop, origin } = loaderData;
     const title = `${product.name} — ${formatPrice(Number(product.price), product.currency)} | ${shop.name}`;
     const desc = product.description?.slice(0, 160) || `Commandez ${product.name} chez ${shop.name} sur WhatsApp.`;
+    const productUrl = `${origin}/b/${shop.slug}/p/${product.id}`;
+    // Image principale du produit comme couverture de partage
+    const ogImage = absoluteMediaUrl(product.images[0], origin);
     const meta = [
-      { title }, { name: "description", content: desc },
-      { property: "og:title", content: title }, { property: "og:description", content: desc },
-      { property: "og:type", content: "product" }, { name: "twitter:card", content: "summary_large_image" },
+      { title },
+      { name: "description", content: desc },
+      { property: "og:site_name", content: "MarketNet" },
+      { property: "og:title", content: title },
+      { property: "og:description", content: desc },
+      { property: "og:type", content: "product" },
+      { property: "og:url", content: productUrl },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: title },
+      { name: "twitter:description", content: desc },
     ];
-    if (product.images[0] && origin) meta.push({ property: "og:image", content: `${origin}${mediaUrl(product.images[0])}` }, { name: "twitter:image", content: `${origin}${mediaUrl(product.images[0])}` });
+    if (ogImage) {
+      meta.push(
+        { property: "og:image", content: ogImage },
+        { property: "og:image:alt", content: product.name },
+        { name: "twitter:image", content: ogImage },
+      );
+    }
     return { meta };
   },
   notFoundComponent: () => <p className="py-20 text-center">Produit introuvable.</p>,

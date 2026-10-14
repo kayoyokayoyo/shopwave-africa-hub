@@ -84,28 +84,45 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
 }
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "MarketNet — Votre boutique en ligne, vos commandes sur WhatsApp" },
-      { name: "description", content: "Créez votre boutique en ligne en quelques minutes et recevez vos commandes sur WhatsApp." },
-      { property: "og:site_name", content: "MarketNet" },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "theme-color", content: "#E8590C" },
-    ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "icon", href: "/favicon.jpg", type: "image/jpeg" },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
-      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap",
-      },
-    ],
-  }),
+  head: () => {
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : (process.env.VITE_PUBLIC_URL ?? "https://marketnet-chi.vercel.app");
+    const ogImage = `${origin}/favicon.jpg`;
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: "MarketNet — Votre boutique en ligne, vos commandes sur WhatsApp" },
+        { name: "description", content: "Créez votre boutique en ligne en quelques minutes et recevez vos commandes sur WhatsApp." },
+        { property: "og:site_name", content: "MarketNet" },
+        { property: "og:type", content: "website" },
+        { property: "og:title", content: "MarketNet — Boutiques en ligne africaines" },
+        { property: "og:description", content: "Créez votre boutique en ligne en quelques minutes et recevez vos commandes sur WhatsApp." },
+        { property: "og:url", content: origin },
+        { property: "og:image", content: ogImage },
+        { property: "og:image:width", content: "1200" },
+        { property: "og:image:height", content: "630" },
+        { property: "og:image:alt", content: "MarketNet — Logo" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: "MarketNet — Boutiques en ligne africaines" },
+        { name: "twitter:description", content: "Créez votre boutique en ligne en quelques minutes et recevez vos commandes sur WhatsApp." },
+        { name: "twitter:image", content: ogImage },
+        { name: "theme-color", content: "#E8590C" },
+      ],
+      links: [
+        { rel: "stylesheet", href: appCss },
+        { rel: "icon", href: "/favicon.jpg", type: "image/jpeg" },
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap",
+        },
+      ],
+    };
+  },
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,

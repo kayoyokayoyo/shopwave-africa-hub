@@ -39,6 +39,21 @@ export function mediaUrl(path?: string | null) {
   return `/api/public/media/${path}`;
 }
 
+/**
+ * Returns a fully qualified URL for an image, required for og:image / twitter:image.
+ * Falls back to the platform logo when no image is available.
+ */
+export function absoluteMediaUrl(
+  path: string | null | undefined,
+  origin: string,
+  fallback?: string,
+): string | null {
+  const raw = path ?? fallback ?? null;
+  if (!raw) return null;
+  if (raw.startsWith("http")) return raw;
+  return `${origin}/api/public/media/${raw}`;
+}
+
 /** Pick readable foreground for a hex color */
 export function contrastOn(hex: string) {
   const h = hex.replace("#", "");
