@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
-import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles, Trash2, AlertTriangle, Lock, Eye, EyeOff, Loader2, Store } from "lucide-react";
+import { User, CreditCard, LogOut, CheckCircle2, Shield, Sparkles, Trash2, AlertTriangle, Lock, Eye, EyeOff, Loader2, Store, Clock, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { getMerchantSubscription } from "@/lib/subscriptions.functions";
 import { useMyShop } from "@/hooks/useMyShop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/dashboard/reglages")({
   head: () => ({
@@ -66,6 +69,13 @@ function SettingsPage() {
       const { data } = await supabase.from("plans").select("*").eq("id", shop!.plan_id).single();
       return data;
     },
+  });
+
+  const getSubFn = useServerFn(getMerchantSubscription);
+  const { data: subLimits } = useQuery({
+    queryKey: ["merchant-subscription-limits", shop?.id],
+    enabled: !!shop?.id,
+    queryFn: () => getSubFn({ data: { shopId: shop!.id } }),
   });
 
   useEffect(() => {
@@ -135,7 +145,7 @@ function SettingsPage() {
       }
 
       // 2. Suppression côté serveur : RPC qui cascade sur shops, products, orders, meta_tokens…
-      const { error } = await supabase.rpc("delete_my_account");
+      const { error } = await (supabase as any).rpc("delete_my_account");
       if (error) throw error;
 
       toast.success("Votre compte a été supprimé. Un e-mail de confirmation vous a été envoyé.");
@@ -211,21 +221,81 @@ function SettingsPage() {
           </div>
         </div>
 
+        {/* Rappels dans l'application (7 jours, 3 jours, Grâce) */}
+        {subLimits?.reminder_level === "7_days" && (
+          <div className="flex items-center gap-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 p-3.5 text-amber-700 dark:text-amber-300 text-xs sm:text-sm">
+            <Clock className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-bold">Rappel : votre abonnement expire dans {subLimits.days_remaining} jour(s)</p>
+              <p className="text-xs opacity-90">Pensez à renouveler votre formule pour continuer à profiter de toutes vos fonctionnalités sans interruption.</p>
+            </div>
+          </div>
+        )}
+
+        {subLimits?.reminder_level === "3_days" && (
+          <div className="flex items-center gap-3 rounded-2xl bg-red-500/10 border border-red-500/20 p-3.5 text-red-700 dark:text-red-300 text-xs sm:text-sm">
+            <AlertTriangle className="h-5 w-5 shrink-0 animate-bounce" />
+            <div>
+              <p className="font-bold">Urgent : votre abonnement expire dans {subLimits.days_remaining} jour(s)</p>
+              <p className="text-xs opacity-90">Renouvelez dès maintenant pour éviter le passage en période de grâce ou la suspension de vos fonctionnalités avancées.</p>
+            </div>
+          </div>
+        )}
+
+        {subLimits?.is_grace_period && (
+          <div className="flex items-center gap-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 p-3.5 text-amber-800 dark:text-amber-200 text-xs sm:text-sm">
+            <Clock className="h-5 w-5 shrink-0 text-amber-600" />
+            <div>
+              <p className="font-bold">Période de grâce active (7 jours)</p>
+              <p className="text-xs opacity-90">
+                Votre abonnement est échu. Vos services restent temporairement accessibles. Au terme de la période de grâce, votre boutique repassera automatiquement au plan Gratuit et les éléments en surplus seront mis en pause sans être supprimés.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 rounded-xl bg-muted/40 p-3.5 sm:p-4 border">
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-extrabold text-base sm:text-lg capitalize">{plan?.name || shop?.plan_id || "Gratuit"}</span>
-              <span className="rounded-full bg-primary/15 text-primary px-2.5 py-0.5 text-xs font-bold">Actif</span>
+              <span className="font-extrabold text-base sm:text-lg capitalize">
+                {subLimits?.plan_name || plan?.name || shop?.plan_id || "Gratuit"}
+              </span>
+              <span
+                className={cn(
+                  "rounded-full px-2.5 py-0.5 text-xs font-bold",
+                  subLimits?.status === "grâce"
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                    : subLimits?.status === "expiré"
+                    ? "bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/30"
+                    : "bg-primary/15 text-primary"
+                )}
+              >
+                {subLimits?.status === "grâce" ? "Période de grâce" : subLimits?.status === "expiré" ? "Expiré" : "Actif"}
+              </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
-              {plan?.max_active_promotions != null
-                ? `${plan.max_active_promotions} promotion(s) active(s) autorisée(s)`
-                : "Promotions actives illimitées"}
-            </p>
+
+            {subLimits?.ends_at && subLimits.plan_id !== "free" && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Valide jusqu'au {new Date(subLimits.ends_at).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+              </p>
+            )}
+
+            <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+              <span className="bg-background px-2 py-0.5 rounded border">
+                {subLimits?.max_products != null ? `Jusqu'à ${subLimits.max_products} produits` : "Produits illimités"}
+              </span>
+              <span className="bg-background px-2 py-0.5 rounded border">
+                {subLimits?.max_active_promotions != null ? `${subLimits.max_active_promotions} promo(s) active(s)` : "Promos illimitées"}
+              </span>
+              <span className="bg-background px-2 py-0.5 rounded border">
+                {subLimits?.max_photos ? `${subLimits.max_photos} photos / produit` : "3 photos / produit"}
+              </span>
+            </div>
           </div>
+
           <div className="flex items-center gap-1.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-border/60">
             <Sparkles className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-            <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Contactez l'administration pour changer de plan</span>
+            <span className="text-[11px] sm:text-xs font-medium text-muted-foreground">Contactez l'administration pour renouveler ou changer de plan</span>
           </div>
         </div>
       </section>

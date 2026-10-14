@@ -142,6 +142,63 @@ export type Database = {
           },
         ]
       }
+      merchant_subscriptions: {
+        Row: {
+          cree_le: string
+          debut: string
+          fin: string
+          id: string
+          merchant_id: string
+          mis_a_jour_le: string
+          payment_id: string | null
+          period: string
+          plan_id: string
+          shop_id: string
+          statut: string
+        }
+        Insert: {
+          cree_le?: string
+          debut?: string
+          fin: string
+          id?: string
+          merchant_id: string
+          mis_a_jour_le?: string
+          payment_id?: string | null
+          period?: string
+          plan_id: string
+          shop_id: string
+          statut: string
+        }
+        Update: {
+          cree_le?: string
+          debut?: string
+          fin?: string
+          id?: string
+          merchant_id?: string
+          mis_a_jour_le?: string
+          payment_id?: string | null
+          period?: string
+          plan_id?: string
+          shop_id?: string
+          statut?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "merchant_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "merchant_subscriptions_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           created_at: string
@@ -185,6 +242,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_events: {
+        Row: {
+          corps: Json
+          created_at: string
+          id: string
+          recu_le: string
+          resultat: string | null
+          session_id: string | null
+          signature_valide: boolean
+          traite_le: string | null
+          transaction_id: string | null
+          type_evenement: string
+        }
+        Insert: {
+          corps: Json
+          created_at?: string
+          id?: string
+          recu_le?: string
+          resultat?: string | null
+          session_id?: string | null
+          signature_valide?: boolean
+          traite_le?: string | null
+          transaction_id?: string | null
+          type_evenement: string
+        }
+        Update: {
+          corps?: Json
+          created_at?: string
+          id?: string
+          recu_le?: string
+          resultat?: string | null
+          session_id?: string | null
+          signature_valide?: boolean
+          traite_le?: string | null
+          transaction_id?: string | null
+          type_evenement?: string
+        }
+        Relationships: []
       }
       plans: {
         Row: {
@@ -230,6 +326,44 @@ export type Database = {
           promo_templates?: string[]
         }
         Relationships: []
+      }
+      plan_prices: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          period: string
+          plan_id: string
+          price_cdf: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          period: string
+          plan_id: string
+          price_cdf: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          period?: string
+          plan_id?: string
+          price_cdf?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_prices_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_categories: {
         Row: {
@@ -622,42 +756,81 @@ export type Database = {
       subscription_payments: {
         Row: {
           admin_note: string | null
-          amount: number
+          amount: number | null
+          checkout_url: string | null
           created_at: string
+          cree_le: string
+          frais: number | null
           id: string
-          method: string
-          months: number
+          merchant_id: string | null
+          method: string | null
+          methode: string | null
+          months: number | null
+          montant_cdf: number | null
+          montant_debite: number | null
+          montant_net: number | null
+          paye_le: string | null
+          period: string | null
           plan_id: string
-          reference: string
+          reference: string | null
           reviewed_at: string | null
-          shop_id: string
-          status: Database["public"]["Enums"]["payment_status"]
+          saspay_session_id: string | null
+          saspay_transaction_id: string | null
+          shop_id: string | null
+          status: string | null
+          statut: string | null
         }
         Insert: {
           admin_note?: string | null
-          amount: number
+          amount?: number | null
+          checkout_url?: string | null
           created_at?: string
+          cree_le?: string
+          frais?: number | null
           id?: string
-          method: string
-          months?: number
+          merchant_id?: string | null
+          method?: string | null
+          methode?: string | null
+          months?: number | null
+          montant_cdf?: number | null
+          montant_debite?: number | null
+          montant_net?: number | null
+          paye_le?: string | null
+          period?: string | null
           plan_id: string
-          reference: string
+          reference?: string | null
           reviewed_at?: string | null
-          shop_id: string
-          status?: Database["public"]["Enums"]["payment_status"]
+          saspay_session_id?: string | null
+          saspay_transaction_id?: string | null
+          shop_id?: string | null
+          status?: string | null
+          statut?: string | null
         }
         Update: {
           admin_note?: string | null
-          amount?: number
+          amount?: number | null
+          checkout_url?: string | null
           created_at?: string
+          cree_le?: string
+          frais?: number | null
           id?: string
-          method?: string
-          months?: number
+          merchant_id?: string | null
+          method?: string | null
+          methode?: string | null
+          months?: number | null
+          montant_cdf?: number | null
+          montant_debite?: number | null
+          montant_net?: number | null
+          paye_le?: string | null
+          period?: string | null
           plan_id?: string
-          reference?: string
+          reference?: string | null
           reviewed_at?: string | null
-          shop_id?: string
-          status?: Database["public"]["Enums"]["payment_status"]
+          saspay_session_id?: string | null
+          saspay_transaction_id?: string | null
+          shop_id?: string | null
+          status?: string | null
+          statut?: string | null
         }
         Relationships: [
           {
