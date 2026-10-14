@@ -268,89 +268,115 @@ function DashboardAbonnementPage() {
 
       {/* Carte du Plan Actuel */}
       <section className="rounded-3xl border bg-card p-5 sm:p-6 shadow-sm space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
-          <div className="space-y-1">
-            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Votre formule active</span>
-            <div className="flex items-center gap-3">
-              <h2 className="text-xl sm:text-2xl font-black capitalize">
-                Plan {subLimits?.plan_name || shop?.plan_id || "Gratuit"}
-              </h2>
-              <span
-                className={cn(
-                  "rounded-full px-3 py-1 text-xs font-extrabold border",
-                  isGrace
-                    ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                    : isExpired
-                    ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
-                    : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
-                )}
-              >
-                {isGrace ? "Période de grâce" : isExpired ? "Expiré" : "Actif"}
-              </span>
+        {limitsLoading ? (
+          /* Skeleton : rien de fictif n'est jamais affiché */
+          <div className="animate-pulse space-y-4">
+            <div className="flex items-center justify-between border-b pb-4">
+              <div className="space-y-2">
+                <div className="h-3 w-28 rounded bg-muted" />
+                <div className="h-7 w-36 rounded-lg bg-muted" />
+              </div>
+              <div className="h-6 w-14 rounded-full bg-muted" />
+            </div>
+            <div>
+              <div className="h-3 w-40 rounded bg-muted mb-3" />
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="rounded-2xl border bg-muted/30 p-3 space-y-2">
+                    <div className="h-3 w-16 rounded bg-muted" />
+                    <div className="h-5 w-20 rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
-
-          {subLimits?.ends_at && currentPlanId !== "free" && (
-            <div className="text-left sm:text-right">
-              <p className="text-xs text-muted-foreground">Date d'échéance :</p>
-              <p className="text-xs sm:text-sm font-bold">
-                {new Date(subLimits.ends_at).toLocaleDateString("fr-FR", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Détail des quotas inclus */}
-        <div>
-          <p className="text-xs font-semibold text-muted-foreground mb-3">Limites de votre boutique :</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Package className="h-3.5 w-3.5" />
-                <span>Catalogue</span>
+        ) : (
+          <>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4">
+              <div className="space-y-1">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Votre formule active</span>
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl sm:text-2xl font-black capitalize">
+                    Plan {subLimits?.plan_name || shop?.plan_id || "Gratuit"}
+                  </h2>
+                  <span
+                    className={cn(
+                      "rounded-full px-3 py-1 text-xs font-extrabold border",
+                      isGrace
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                        : isExpired
+                        ? "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
+                        : "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                    )}
+                  >
+                    {isGrace ? "Période de grâce" : isExpired ? "Expiré" : "Actif"}
+                  </span>
+                </div>
               </div>
-              <p className="font-extrabold text-sm sm:text-base">
-                {subLimits?.max_products != null ? `${subLimits.max_products} max` : "Illimité"}
-              </p>
+
+              {subLimits?.ends_at && currentPlanId !== "free" && (
+                <div className="text-left sm:text-right">
+                  <p className="text-xs text-muted-foreground">Date d'échéance :</p>
+                  <p className="text-xs sm:text-sm font-bold">
+                    {new Date(subLimits.ends_at).toLocaleDateString("fr-FR", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </p>
+                </div>
+              )}
             </div>
 
-            <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Camera className="h-3.5 w-3.5" />
-                <span>Photos / produit</span>
-              </div>
-              <p className="font-extrabold text-sm sm:text-base">
-                {subLimits?.max_photos ? `${subLimits.max_photos}` : "3"}
-              </p>
-            </div>
+            {/* Détail des quotas — uniquement quand subLimits est chargé */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-3">Limites de votre boutique :</p>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Package className="h-3.5 w-3.5" />
+                    <span>Catalogue</span>
+                  </div>
+                  <p className="font-extrabold text-sm sm:text-base">
+                    {subLimits.max_products != null ? `${subLimits.max_products} max` : "Illimité"}
+                  </p>
+                </div>
 
-            <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Tag className="h-3.5 w-3.5" />
-                <span>Promotions</span>
-              </div>
-              <p className="font-extrabold text-sm sm:text-base">
-                {subLimits?.max_active_promotions != null
-                  ? `${subLimits.max_active_promotions} active(s)`
-                  : "Illimitées"}
-              </p>
-            </div>
+                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Camera className="h-3.5 w-3.5" />
+                    <span>Photos / produit</span>
+                  </div>
+                  <p className="font-extrabold text-sm sm:text-base">
+                    {subLimits.max_photos}
+                  </p>
+                </div>
 
-            <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Share2 className="h-3.5 w-3.5" />
-                <span>Meta Ads</span>
+                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Tag className="h-3.5 w-3.5" />
+                    <span>Promotions</span>
+                  </div>
+                  <p className="font-extrabold text-sm sm:text-base">
+                    {subLimits.max_active_promotions != null
+                      ? `${subLimits.max_active_promotions} active(s)`
+                      : "Illimitées"}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border bg-muted/30 p-3 space-y-1">
+                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Share2 className="h-3.5 w-3.5" />
+                    <span>Meta Ads</span>
+                  </div>
+                  <p className="font-extrabold text-sm sm:text-base">
+                    {subLimits.meta_access ? "Inclus" : "Non inclus"}
+                  </p>
+                </div>
               </div>
-              <p className="font-extrabold text-sm sm:text-base">
-                {subLimits?.meta_access ? "Inclus" : "Non inclus"}
-              </p>
             </div>
-          </div>
-        </div>
+          </>
+        )}
       </section>
 
       {/* Grille des Formules Disponibles */}
