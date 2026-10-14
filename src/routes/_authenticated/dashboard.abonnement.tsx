@@ -31,7 +31,7 @@ import {
   getPlanPrices,
   createCheckoutSession,
 } from "@/lib/subscriptions.functions";
-import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
+import { formatUSD, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -117,7 +117,7 @@ export const Route = createFileRoute("/_authenticated/dashboard/abonnement")({
   head: () => ({
     meta: [
       { title: "Mon Abonnement & Paiements — MarketNet" },
-      { name: "description", content: "Gérez votre formule d'abonnement MarketNet et payez en CDF via SasPay." },
+      { name: "description", content: "Gérez votre formule d'abonnement MarketNet et payez en USD ($) via SasPay." },
     ],
   }),
   component: DashboardAbonnementPage,
@@ -216,7 +216,7 @@ function DashboardAbonnementPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Mon Abonnement</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Choisissez la formule adaptée à la croissance de votre boutique et réglez en Francs Congolais (CDF).
+            Choisissez la formule adaptée à la croissance de votre boutique et réglez en Dollars ($ USD).
           </p>
         </div>
       </div>
@@ -456,18 +456,18 @@ function DashboardAbonnementPage() {
                       <span className="font-extrabold text-lg">{plan.name}</span>
                     </div>
 
-                    {/* Prix — depuis plan_prices ou directement depuis le plan configuré */}
+                    {/* Prix — strictement en Dollars ($ USD) */}
                     <div>
                       {isFree ? (
                         <>
-                          <span className="text-3xl font-black">0 CDF</span>
+                          <span className="text-3xl font-black">0 $</span>
                           <span className="text-xs text-muted-foreground ml-1">/toujours</span>
                         </>
                       ) : (price != null || plan.price_usd != null) ? (
                         <>
                           <span className="text-3xl font-black">
-                            {formatCDF(
-                              price?.price_cdf ??
+                            {formatUSD(
+                              price?.price_usd ??
                                 (selectedPeriod === "mensuel"
                                   ? (plan.price_usd ?? 0)
                                   : (plan.price_usd ?? 0) * 10)
@@ -599,10 +599,10 @@ function DashboardAbonnementPage() {
 
                   <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
                     <div className="text-left sm:text-right">
-                      <p className="font-extrabold text-sm">{formatCDF(pay.montant_cdf ?? 0)}</p>
+                      <p className="font-extrabold text-sm">{formatUSD(pay.montant_usd ?? pay.montant_cdf ?? 0)}</p>
                       {pay.frais != null && pay.frais > 0 && (
                         <p className="text-[10px] text-muted-foreground">
-                          + {formatCDF(pay.frais)} frais
+                          + {formatUSD(pay.frais)} frais
                         </p>
                       )}
                     </div>

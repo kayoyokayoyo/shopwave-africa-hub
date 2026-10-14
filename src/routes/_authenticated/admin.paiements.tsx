@@ -54,7 +54,7 @@ import {
   adminAssignPlan,
   adminGetPaymentEvents,
 } from "@/lib/subscriptions.functions";
-import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
+import { formatUSD, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/paiements")({
@@ -217,7 +217,7 @@ function AdminPaymentsPage() {
             <CreditCard className="h-6 w-6 text-primary" /> Paiements & Abonnements
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Suivi des paiements réels, gestion des tarifs en CDF et journal des webhooks.
+            Suivi des paiements réels, gestion des tarifs en USD ($) et journal des webhooks.
           </p>
         </div>
 
@@ -240,7 +240,7 @@ function AdminPaymentsPage() {
           </TabsTrigger>
           <TabsTrigger value="prices" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <DollarSign className="h-4 w-4" />
-            <span>Tarifs CDF</span>
+            <span>Tarifs ($ USD)</span>
           </TabsTrigger>
           <TabsTrigger value="events" className="rounded-xl text-xs sm:text-sm font-semibold gap-2">
             <Activity className="h-4 w-4" />
@@ -295,7 +295,7 @@ function AdminPaymentsPage() {
             <div className="grid gap-3">
               {paymentsList.map((p: any) => {
                 const effectiveStatut = p.statut || (p.status === "approved" ? "payé" : p.status === "rejected" ? "échoué" : "en_attente");
-                const amountCDF = p.montant_cdf ?? (p.amount ? p.amount * 2800 : 0);
+                const amountUSD = p.montant_usd ?? p.montant_cdf ?? (p.amount || 0);
                 const isActionable = effectiveStatut === "à_vérifier" || effectiveStatut === "en_attente" || p.methode === "manuel";
 
                 return (
@@ -324,7 +324,7 @@ function AdminPaymentsPage() {
 
                       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                         <span className="font-black text-foreground text-sm">
-                          {formatCDF(amountCDF)}
+                          {formatUSD(amountUSD)}
                         </span>
                         <span>•</span>
                         <span className="capitalize">Méthode : {p.methode || p.method || "saspay"}</span>
@@ -396,11 +396,11 @@ function AdminPaymentsPage() {
           )}
         </TabsContent>
 
-        {/* ── TAB 2: TARIFS DES PLANS (CDF) ─────────────────────────────────── */}
+        {/* ── TAB 2: TARIFS DES PLANS (USD) ─────────────────────────────────── */}
         <TabsContent value="prices" className="space-y-6 m-0">
           <div className="rounded-2xl border bg-card p-5 space-y-2">
             <h3 className="font-extrabold text-base flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-primary" /> Grille Tarifaire en Francs Congolais (CDF)
+              <DollarSign className="h-5 w-5 text-primary" /> Grille Tarifaire en Dollars ($ USD)
             </h3>
             <p className="text-xs text-muted-foreground">
               Ces prix sont utilisés lors de la génération des liens de paiement et des renouvellements.
@@ -510,7 +510,7 @@ function AdminPaymentsPage() {
                 <div>
                   <span className="text-muted-foreground">Montant total</span>
                   <p className="font-bold text-sm text-primary">
-                    {formatCDF(selectedPayment.montant_cdf ?? (selectedPayment.amount ? selectedPayment.amount * 2800 : 0))}
+                    {formatUSD(selectedPayment.montant_usd ?? selectedPayment.montant_cdf ?? (selectedPayment.amount || 0))}
                   </p>
                 </div>
                 <div>
@@ -540,13 +540,13 @@ function AdminPaymentsPage() {
                 {selectedPayment.frais != null && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Frais :</span>
-                    <span>{formatCDF(selectedPayment.frais)}</span>
+                    <span>{formatUSD(selectedPayment.frais)}</span>
                   </div>
                 )}
                 {selectedPayment.montant_net != null && (
                   <div className="flex justify-between font-bold">
                     <span>Montant net :</span>
-                    <span>{formatCDF(selectedPayment.montant_net)}</span>
+                    <span>{formatUSD(selectedPayment.montant_net)}</span>
                   </div>
                 )}
               </div>
@@ -722,23 +722,23 @@ function PlanPriceCard({
   onSave: () => void;
   updateFn: any;
 }) {
-  const [priceCdf, setPriceCdf] = useState(String(item.price_cdf));
+  const [priceUsd, setPriceUsd] = useState(String(item.price_usd ?? item.price_cdf ?? 0));
   const [isActive, setIsActive] = useState(Boolean(item.is_active));
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
-    const val = Number(priceCdf);
-    if (isNaN(val) || val < 0) return toast.error("Montant CDF invalide");
+    const val = Number(priceUsd);
+    if (isNaN(val) || val < 0) return toast.error("Montant USD invalide");
     setSaving(true);
     try {
       await updateFn({
         data: {
           id: item.id,
-          price_cdf: val,
+          price_usd: val,
           is_active: isActive,
         },
       });
-      toast.success(`Tarif mis à jour : ${item.plan_id} (${item.period})`);
+      toast.success(`Tarif mis à jour : ${item.plan_id} (${item.period}) — ${val} $`);
       onSave();
     } catch (err: any) {
       toast.error(err.message || "Erreur de mise à jour");
@@ -760,18 +760,18 @@ function PlanPriceCard({
         </div>
 
         <div className="space-y-1.5 pt-2">
-          <Label className="text-xs text-muted-foreground">Prix en Francs Congolais (CDF)</Label>
+          <Label className="text-xs text-muted-foreground">Prix en Dollars ($ USD)</Label>
           <div className="relative">
             <Input
               type="number"
               min="0"
-              step="500"
-              value={priceCdf}
-              onChange={(e) => setPriceCdf(e.target.value)}
+              step="1"
+              value={priceUsd}
+              onChange={(e) => setPriceUsd(e.target.value)}
               className="h-10 rounded-xl pr-12 font-bold text-base"
             />
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-muted-foreground">
-              CDF
+              $
             </span>
           </div>
         </div>

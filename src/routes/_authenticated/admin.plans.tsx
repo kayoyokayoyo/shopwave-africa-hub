@@ -182,7 +182,7 @@ function PlanEditor({ plan }: { plan: Plan }) {
 
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1.5">
-          <Label className="text-[11px] text-muted-foreground uppercase flex items-center gap-1"><span className="text-emerald-500 font-bold">$</span> Prix</Label>
+          <Label className="text-[11px] text-muted-foreground uppercase flex items-center gap-1"><span className="text-emerald-500 font-bold">$</span> Prix (USD)</Label>
           <Input 
             className={`font-mono text-center h-10 ${!isEditing ? 'bg-transparent border-transparent px-0 focus-visible:ring-0 shadow-none' : 'bg-background'}`} 
             inputMode="decimal" 

@@ -363,13 +363,13 @@ Pour rendre à un ancien compte commerçant son rôle après l’avoir promu, d�
 
 ## Système d'Abonnements & Paiements SasPay (Intégration Complète)
 
-MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Business) couplé à la passerelle de paiement **SasPay** (Mobile Money & Cartes bancaires en RDC). L'implémentation est divisée en 3 volets sécurisés et indépendants :
+MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Business) couplé à la passerelle de paiement **SasPay** (Mobile Money & Cartes bancaires en $ USD). L'implémentation est divisée en 3 volets sécurisés et indépendants :
 
 ### 1. Données, Tarification et Logique Métier (Partie 1/3)
 
 - **Tables Supabase dédiées avec Row Level Security (RLS) :**
-  - `plan_prices` : Tarifs administrables en Francs Congolais (CDF) par plan et période (`mensuel` ou `annuel`). Les montants ne sont jamais codés en dur ni modifiables par le client.
-  - `subscription_payments` : Historique complet des demandes et transactions (`id`, `merchant_id`, `shop_id`, `plan_id`, `period`, `montant_cdf`, `statut`, `methode`, `saspay_session_id`, `checkout_url`, `saspay_transaction_id`, `montant_debite`, `montant_net`, `frais`, `cree_le`, `paye_le`, `admin_note`).
+  - `plan_prices` : Tarifs administrables en Dollars ($ USD) par plan et période (`mensuel` ou `annuel`). Les montants ne sont jamais codés en dur ni modifiables par le client. Un trigger PostgreSQL (`trg_sync_plan_prices`) maintient la synchronisation automatique avec la table `plans`.
+  - `subscription_payments` : Historique complet des demandes et transactions (`id`, `merchant_id`, `shop_id`, `plan_id`, `period`, `montant_usd`, `currency = 'USD'`, `statut`, `methode`, `saspay_session_id`, `checkout_url`, `saspay_transaction_id`, `montant_debite`, `montant_net`, `frais`, `cree_le`, `paye_le`, `admin_note`).
   - `merchant_subscriptions` : Périodes actives des commerçants (`debut`, `fin`, `statut` : `actif`, `grâce`, `expiré`).
   - `payment_events` : Journal d'audit immuable des webhooks bruts reçus avec statut de vérification de signature et résultat de traitement.
 - **Règles d'abonnement :**
@@ -388,16 +388,16 @@ MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Busine
   ```
 - **Création de Session (`createCheckoutSession`) :**
   - Déduplication : si une demande `en_attente` identique existe depuis moins d'une heure, son `checkout_url` est réutilisé au lieu d'en créer une nouvelle.
-  - Les prix proviennent impérativement de `plan_prices` côté serveur.
-  - Appel de `POST https://api.saspay.me/api/v1/checkout-sessions/` avec nom de la boutique, e-mail et métadonnées de suivi.
-- **Interface dans Réglages (`/dashboard/reglages`) :**
+  - Les prix proviennent impérativement de `plan_prices` / `plans` côté serveur (strictement en USD).
+  - Appel de `POST https://api.saspay.me/api/v1/checkout-sessions/` avec nom de la boutique, e-mail et métadonnées de suivi (devise `USD`).
+- **Interface dédiée (`/dashboard/abonnement`) :**
   - Sélecteur de période (mensuel ou annuel avec économie affichée).
-  - Cartes comparatives Pro et Business avec prix en CDF, liste des fonctionnalités et bouton de souscription/renouvellement.
-  - Avertissement clair sur les frais de passerelle.
-  - Tableau de l'historique des 5 derniers paiements avec statuts et références.
+  - Cartes comparatives Pro et Business avec prix en **$ USD**, liste dynamique des fonctionnalités et bouton de souscription/renouvellement.
+  - Skeleton loading élégant pour éliminer tout clignotement de fausses données.
+  - Tableau de l'historique des paiements en **$ USD** avec statuts et références.
 - **Page de retour (`/abonnement/retour?ref=<paymentId>`) :**
   - Polling automatique toutes les 3 secondes pendant 60 secondes maximum.
-  - États animés : vérification en cours, reçu de paiement détaillé (référence, montant facturé, montant débité, frais, date, ID de transaction), échec avec explication, ou délai dépassé avec possibilité de revérification.
+  - États animés : vérification en cours, reçu de paiement détaillé en **$ USD** (référence, montant facturé, montant débité, frais, date, ID de transaction), échec avec explication, ou délai dépassé avec possibilité de revérification.
 
 ### 3. Webhook SasPay, Sécurité & Confidentialité (Partie 3/3)
 
@@ -410,8 +410,8 @@ MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Busine
 - **Gestion des Événements :**
   - `transaction.success` (ou `payment.completed`) :
     - Rapprochement via métadonnées, référence ou session distante.
-    - Contrôle que la devise est bien `CDF`.
-    - Contrôle que `amount` ou `net_amount` correspond au tarif du plan attendu (**jamais** `charged` seul car les frais s'y ajoutent).
+    - Contrôle que la devise est strictement `USD`.
+    - Contrôle que `amount` ou `net_amount` correspond au tarif du plan attendu en dollars (**jamais** `charged` seul car les frais s'y ajoutent, tolérance de 0.05 $).
     - En cas d'incohérence, le paiement est marqué `à_vérifier` avec note explicative pour validation admin sans deviner.
     - Si tout est conforme : mise à jour en `payé`, enregistrement des frais/nets et activation immédiate de l'abonnement.
   - `transaction.failed` / `transaction.cancelled` : Mise à jour du statut en `échoué` ou `annulé`.
@@ -421,7 +421,7 @@ MarketNet intègre un système d'abonnement multi-formules (Gratuit, Pro, Busine
 
 ### 4. Validation des Tests
 
-Le module d'abonnements et de paiements est couvert par **20 tests automatisés** exécutables via :
+Le module d'abonnements et de paiements est couvert par **20 tests automatisés** (et 29 tests totaux projet) exécutables via :
 ```powershell
 npm test
 ```

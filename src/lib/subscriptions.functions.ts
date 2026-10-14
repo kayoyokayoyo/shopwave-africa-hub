@@ -37,7 +37,7 @@ export const getPlanPrices = createServerFn({ method: "GET" }).handler(
     const { data, error } = await sb
       .from("plan_prices")
       .select("*")
-      .order("price_cdf", { ascending: true });
+      .order("price_usd", { ascending: true });
 
     if (error) throw new Error(error.message);
     return (data ?? []) as PlanPrice[];
@@ -49,7 +49,7 @@ export const adminUpdatePlanPrice = createServerFn({ method: "POST" })
   .validator(
     z.object({
       id: z.string().uuid(),
-      price_cdf: z.number().min(0),
+      price_usd: z.number().min(0),
       is_active: z.boolean(),
     })
   )
@@ -68,7 +68,8 @@ export const adminUpdatePlanPrice = createServerFn({ method: "POST" })
     const { error } = await sb
       .from("plan_prices")
       .update({
-        price_cdf: input.price_cdf,
+        price_usd: input.price_usd,
+        currency: "USD",
         is_active: input.is_active,
         updated_at: new Date().toISOString(),
       })
@@ -594,18 +595,19 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       throw new Error("Impossible de récupérer l'adresse e-mail du compte.");
     }
 
-    // 3. Récupérer le prix depuis plan_prices ou directement depuis le plan configuré par l'admin
+    // 3. Récupérer le tarif USD depuis plan_prices ou directement depuis le plan configuré par l'admin
     const { data: planPrice } = await sb
       .from("plan_prices")
-      .select("price_cdf, is_active")
+      .select("price_usd, price_cdf, is_active, currency")
       .eq("plan_id", input.planId)
       .eq("period", input.period)
       .eq("is_active", true)
       .maybeSingle();
 
-    let amountCdf: number | undefined = planPrice?.price_cdf != null ? Number(planPrice.price_cdf) : undefined;
+    let amountUsd: number | undefined =
+      planPrice?.price_usd != null ? Number(planPrice.price_usd) : undefined;
 
-    if (amountCdf == null) {
+    if (amountUsd == null) {
       // Fallback sécurisé : lire directement le prix configuré sur le plan
       const { data: planRow } = await sb
         .from("plans")
@@ -614,15 +616,24 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         .maybeSingle();
 
       if (planRow && planRow.price_usd != null && planRow.active) {
-        amountCdf = input.period === "mensuel" ? Number(planRow.price_usd) : Number(planRow.price_usd) * 10;
+        amountUsd =
+          input.period === "mensuel"
+            ? Number(planRow.price_usd)
+            : Number(planRow.price_usd) * 10;
       }
     }
 
-    if (amountCdf == null || amountCdf <= 0) {
+    if (amountUsd == null || amountUsd <= 0) {
       throw new Error(
         `Aucun tarif actif trouvé pour le plan ${planLabel} (${input.period}). Contactez l'administration.`
       );
     }
+
+    // Équivalent CDF indicatif
+    const amountCdf =
+      planPrice?.price_cdf != null
+        ? Number(planPrice.price_cdf)
+        : Math.round(amountUsd * 2850);
 
     // 4. Déduplication : renvoyer une session existante si déjà en attente et non expirée
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
@@ -656,6 +667,8 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         shop_id: input.shopId,
         plan_id: input.planId,
         period: input.period,
+        currency: "USD",
+        montant_usd: amountUsd,
         montant_cdf: amountCdf,
         statut: "en_attente",
         methode: "saspay",
@@ -667,7 +680,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
       throw new Error("Impossible de créer l'enregistrement de paiement.");
     }
 
-    const amountText = amountCdf.toFixed(2);
+    const amountText = amountUsd.toFixed(2);
     const periodLabel = input.period === "mensuel" ? "mensuel" : "annuel";
     const description = `Abonnement MarketNet : ${planLabel} ${periodLabel}`;
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString(); // +1h
@@ -677,7 +690,7 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
     try {
       sasPaySession = await createSasPayCheckout({
         amount: amountText,
-        currency: "CDF",
+        currency: "USD",
         description,
         country: "CD",
         customer_email: customerEmail,
@@ -686,8 +699,10 @@ export const createCheckoutSession = createServerFn({ method: "POST" })
         metadata: {
           payment_id: payment.id,
           merchant_id: context.userId,
-          plan: input.planId,
+          shop_id: input.shopId,
+          plan_id: input.planId,
           period: input.period,
+          currency: "USD",
         },
         expires_at: expiresAt,
       });
@@ -728,7 +743,7 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
 
     const { data: payment, error } = await sb
       .from("subscription_payments")
-      .select("id, statut, plan_id, period, montant_cdf, montant_debite, montant_net, frais, cree_le, paye_le, merchant_id, shop_id, saspay_transaction_id")
+      .select("id, statut, plan_id, period, montant_usd, montant_cdf, currency, montant_debite, montant_net, frais, cree_le, paye_le, merchant_id, shop_id, saspay_transaction_id")
       .eq("id", input.paymentId)
       .maybeSingle();
 
@@ -746,6 +761,8 @@ export const getPaymentStatus = createServerFn({ method: "GET" })
       statut: payment.statut as PaymentStatus,
       plan_id: payment.plan_id,
       period: payment.period as SubscriptionPeriod,
+      montant_usd: payment.montant_usd ?? payment.montant_cdf,
+      currency: payment.currency ?? "USD",
       montant_cdf: payment.montant_cdf,
       montant_debite: payment.montant_debite ?? null,
       montant_net: payment.montant_net ?? null,

@@ -5,6 +5,7 @@ import {
   determineSubscriptionStatus,
   calculateReminderLevel,
   identifyExcessItemsToPause,
+  formatUSD,
   formatCDF,
 } from "../lib/subscriptions";
 import { verifySasPayWebhookSignature } from "../lib/saspay";
@@ -159,11 +160,13 @@ describe("Système d'abonnements & Paiements - Partie 1/3", () => {
     });
   });
 
-  describe("4. Anciennes fonctions & formatage inchangés", () => {
-    it("formate correctement les montants en Francs Congolais (CDF)", () => {
-      const formatted = formatCDF(25000);
-      expect(formatted).toContain("25");
-      expect(formatted.includes("FC") || formatted.includes("CDF")).toBe(true);
+  describe("4. Formatage des montants d'abonnement (USD)", () => {
+    it("formate correctement les montants en Dollars ($ USD)", () => {
+      const formatted = formatUSD(5);
+      expect(formatted).toBe("5 $");
+      const formattedDecimal = formatUSD(5.5);
+      expect(formattedDecimal).toContain("5,5");
+      expect(formattedDecimal).toContain("$");
     });
   });
 
@@ -249,34 +252,34 @@ describe("Système d'abonnements & Paiements - Partie 1/3", () => {
     });
   });
 
-  describe("6. Logique Métier Webhook SasPay - Partie 3/3", () => {
-    // Rapprochement et contrôles de montant
-    it("valide la cohérence du montant avec le prix attendu du plan (CDF)", () => {
-      const expectedPrice = 25000;
+  describe("6. Logique Métier Webhook SasPay - USD", () => {
+    // Rapprochement et contrôles de montant en USD
+    it("valide la cohérence du montant avec le prix attendu du plan (USD)", () => {
+      const expectedPrice = 5; // 5 $ USD
 
       // amount ou net_amount correspond au prix
-      const candidate1 = { amount: 25000, charged: 25750, fee: 750, currency: "CDF" };
+      const candidate1 = { amount: 5, charged: 5.15, fee: 0.15, currency: "USD" };
       const isCandidate1Valid =
-        candidate1.currency === "CDF" &&
-        Math.abs(candidate1.amount - expectedPrice) < 1;
+        candidate1.currency === "USD" &&
+        Math.abs(candidate1.amount - expectedPrice) <= 0.05;
       expect(isCandidate1Valid).toBe(true);
 
-      // JAMAIS charged seul (contient les frais 25750)
-      const isChargedValid = Math.abs(candidate1.charged - expectedPrice) < 1;
+      // JAMAIS charged seul (contient les frais 5.15 $)
+      const isChargedValid = Math.abs(candidate1.charged - expectedPrice) <= 0.05;
       expect(isChargedValid).toBe(false);
     });
 
     it("détecte un montant incohérent pour mise en 'à_vérifier'", () => {
-      const expectedPrice = 25000;
-      const receivedAmount = 10000; // reçu 10 000 au lieu de 25 000
+      const expectedPrice = 5;
+      const receivedAmount = 2; // reçu 2 $ au lieu de 5 $
 
-      const isAmountValid = Math.abs(receivedAmount - expectedPrice) < 1;
+      const isAmountValid = Math.abs(receivedAmount - expectedPrice) <= 0.05;
       expect(isAmountValid).toBe(false);
     });
 
-    it("détecte une devise non CDF pour mise en 'à_vérifier'", () => {
-      const currency = "USD";
-      expect(currency.toUpperCase() === "CDF").toBe(false);
+    it("détecte une devise non USD pour mise en 'à_vérifier'", () => {
+      const currency = "EUR";
+      expect(currency.toUpperCase() === "USD").toBe(false);
     });
 
     it("filtre les événements informatifs ou de test pour journalisation seule", () => {

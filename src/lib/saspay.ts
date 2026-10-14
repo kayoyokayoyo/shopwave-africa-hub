@@ -29,8 +29,8 @@ export function getSasPayWebhookSecret(): string {
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export interface SasPayCheckoutInput {
-  amount: string;           // Décimal texte, ex: "10000.00"
-  currency: "CDF";
+  amount: string;           // Décimal texte, ex: "5.00"
+  currency: "USD";
   description: string;      // ex: "Abonnement MarketNet : Pro mensuel"
   country: "CD";
   customer_email: string;

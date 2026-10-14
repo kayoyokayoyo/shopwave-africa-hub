@@ -19,7 +19,9 @@ export interface PlanPrice {
   id: string;
   plan_id: string;
   period: SubscriptionPeriod;
+  price_usd?: number | null;
   price_cdf: number;
+  currency?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -46,6 +48,8 @@ export interface SubscriptionPayment {
   plan_id: string;
   period: SubscriptionPeriod;
   montant_cdf: number;
+  montant_usd?: number | null;
+  currency?: string;
   statut: PaymentStatus;
   methode: PaymentMethod;
   saspay_session_id?: string | null;
@@ -265,7 +269,16 @@ export function identifyExcessItemsToPause(params: {
   return { productIdsToHide, promotionIdsToPause };
 }
 
-/** Formatage standard des montants en Francs Congolais (CDF) */
+/** Formatage standard des montants en Dollars ($ USD) pour les abonnements */
+export function formatUSD(amount: number): string {
+  const formatted = new Intl.NumberFormat("fr-FR", {
+    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+  return `${formatted} $`;
+}
+
+/** Formatage CDF pour les transactions de boutiques locales si nécessaire */
 export function formatCDF(amount: number): string {
   return new Intl.NumberFormat("fr-CD", {
     style: "currency",
@@ -273,3 +286,4 @@ export function formatCDF(amount: number): string {
     maximumFractionDigits: 0,
   }).format(amount);
 }
+
