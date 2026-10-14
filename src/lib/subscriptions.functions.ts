@@ -541,7 +541,13 @@ export const processDailySubscriptionChecks = createServerFn({ method: "POST" })
 
 // ── 7. Création session de paiement SasPay ─────────────────────────────────────
 
-const APP_URL = "https://marketnet-chi.vercel.app";
+// URL de base lue depuis l'environnement — jamais codée en dur.
+// Changer de domaine : mettre à jour MARKETNET_SITE_URL dans les secrets Supabase
+// et dans les variables d'environnement Vercel, sans toucher au code.
+const APP_URL =
+  process.env["MARKETNET_SITE_URL"] ||
+  process.env["VITE_SITE_URL"] ||
+  "https://marketnet-chi.vercel.app"; // fallback de sécurité uniquement
 
 export const createCheckoutSession = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
