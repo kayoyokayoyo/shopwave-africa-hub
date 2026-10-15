@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   LifeBuoy, Plus, ChevronRight, MessageCircle, Clock, CheckCircle2,
-  XCircle, AlertCircle, Loader2, Inbox, Upload, X, ShieldAlert, Image,
+  XCircle, AlertCircle, Loader2, Inbox, Upload, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -104,8 +104,6 @@ function SupportPage() {
     titre: "",
     categorie: "autre" as SupportTicketCategorie,
     texte: "",
-    contact_email: "",
-    contact_whatsapp: "",
   });
   const [attachments, setAttachments] = useState<AttachmentPreview[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -135,9 +133,6 @@ function SupportPage() {
       if (!form.texte.trim()) {
         e.texte = "Message requis.";
       }
-      if (form.contact_email && !form.contact_email.includes("@")) {
-        e.contact_email = "Adresse e-mail invalide.";
-      }
       if (Object.keys(e).length > 0) {
         setErrors(e);
         throw new Error("Validation");
@@ -162,8 +157,6 @@ function SupportPage() {
           titre: form.titre.trim(),
           categorie: form.categorie,
           texte: form.texte.trim(),
-          contact_email: form.contact_email.trim() || undefined,
-          contact_whatsapp: form.contact_whatsapp.trim() || undefined,
           attachment_paths,
         },
       });
@@ -176,8 +169,6 @@ function SupportPage() {
         titre: "",
         categorie: "autre",
         texte: "",
-        contact_email: "",
-        contact_whatsapp: "",
       });
       setAttachments([]);
       navigate({
@@ -373,42 +364,35 @@ function SupportPage() {
 
       {/* ─── MODAL : NOUVEAU TICKET DE SUPPORT ─── */}
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl p-6 sm:p-7">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-              <LifeBuoy className="h-5 w-5 text-primary" />
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl p-4 sm:p-5 max-w-[calc(100vw-2rem)]">
+          <DialogHeader className="pb-1 text-left">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <LifeBuoy className="h-4 w-4 text-primary" />
               Nouveau ticket de support
             </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
+            <DialogDescription className="text-xs text-muted-foreground text-left">
               Décrivez votre question ou problème. Notre équipe vous répondra rapidement.
             </DialogDescription>
           </DialogHeader>
 
-          {/* Avertissement de sécurité */}
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3.5 flex items-start gap-2.5 text-xs text-amber-800">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-            <div>
-              <strong>Sécurité :</strong> Ne transmettez jamais votre mot de passe ni vos clés secrètes dans vos messages ou captures d'écran.
-            </div>
-          </div>
 
           <form
             onSubmit={(e) => {
               e.preventDefault();
               createMutation.mutate();
             }}
-            className="space-y-4 pt-1"
+            className="space-y-3 pt-0"
           >
             {/* Catégorie */}
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-categorie" className="text-sm font-semibold">
+            <div className="space-y-1">
+              <Label htmlFor="ticket-categorie" className="text-xs font-semibold">
                 Catégorie <span className="text-red-500">*</span>
               </Label>
               <Select
                 value={form.categorie}
                 onValueChange={(val) => setForm((f) => ({ ...f, categorie: val as SupportTicketCategorie }))}
               >
-                <SelectTrigger id="ticket-categorie" className="h-11 rounded-xl">
+                <SelectTrigger id="ticket-categorie" className="h-9 rounded-xl text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
@@ -422,8 +406,8 @@ function SupportPage() {
             </div>
 
             {/* Titre */}
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-titre" className="text-sm font-semibold">
+            <div className="space-y-1">
+              <Label htmlFor="ticket-titre" className="text-xs font-semibold">
                 Titre ou résumé <span className="text-red-500">*</span>
               </Label>
               <Input
@@ -432,64 +416,35 @@ function SupportPage() {
                 value={form.titre}
                 onChange={(e) => setForm((f) => ({ ...f, titre: e.target.value }))}
                 maxLength={200}
-                className={cn("h-11 rounded-xl", errors.titre && "border-red-500 focus-visible:ring-red-500")}
+                className={cn("h-9 rounded-xl text-sm", errors.titre && "border-red-500 focus-visible:ring-red-500")}
               />
               {errors.titre && <p className="text-xs text-red-600">{errors.titre}</p>}
             </div>
 
             {/* Message */}
-            <div className="space-y-1.5">
-              <Label htmlFor="ticket-texte" className="text-sm font-semibold">
-                Description détaillée <span className="text-red-500">*</span>
+            <div className="space-y-1">
+              <Label htmlFor="ticket-texte" className="text-xs font-semibold">
+                Description <span className="text-red-500">*</span>
               </Label>
               <Textarea
                 id="ticket-texte"
                 placeholder="Expliquez ce qui se passe, les étapes pour reproduire le problème…"
-                rows={4}
+                rows={3}
                 value={form.texte}
                 onChange={(e) => setForm((f) => ({ ...f, texte: e.target.value }))}
                 maxLength={10000}
-                className={cn("rounded-xl resize-none", errors.texte && "border-red-500 focus-visible:ring-red-500")}
+                className={cn("rounded-xl resize-none text-sm", errors.texte && "border-red-500 focus-visible:ring-red-500")}
               />
               {errors.texte && <p className="text-xs text-red-600">{errors.texte}</p>}
             </div>
 
-            {/* Coordonnées optionnelles */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="ticket-email" className="text-xs font-semibold text-muted-foreground">
-                  Email de contact (optionnel)
-                </Label>
-                <Input
-                  id="ticket-email"
-                  type="email"
-                  placeholder="nom@exemple.com"
-                  value={form.contact_email}
-                  onChange={(e) => setForm((f) => ({ ...f, contact_email: e.target.value }))}
-                  className="h-10 rounded-xl text-xs"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="ticket-whatsapp" className="text-xs font-semibold text-muted-foreground">
-                  WhatsApp (optionnel)
-                </Label>
-                <Input
-                  id="ticket-whatsapp"
-                  type="tel"
-                  placeholder="+243..."
-                  value={form.contact_whatsapp}
-                  onChange={(e) => setForm((f) => ({ ...f, contact_whatsapp: e.target.value }))}
-                  className="h-10 rounded-xl text-xs"
-                />
-              </div>
-            </div>
 
             {/* Pièces jointes (captures d'écran) */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold flex items-center justify-between">
-                <span>Captures d'écran ({attachments.length}/3)</span>
-                <span className="text-xs font-normal text-muted-foreground">Max 5 Mo · JPG, PNG, WebP</span>
-              </Label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold">Captures d'écran ({attachments.length}/3)</span>
+                <span className="text-[10px] text-muted-foreground">Max 5 Mo · JPG, PNG, WebP</span>
+              </div>
 
               <input
                 ref={fileInputRef}
@@ -504,9 +459,9 @@ function SupportPage() {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed py-3 text-sm font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
+                  className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed py-2.5 text-xs font-medium text-muted-foreground hover:bg-muted/40 hover:text-foreground transition-colors"
                 >
-                  <Upload className="h-4 w-4" />
+                  <Upload className="h-3.5 w-3.5" />
                   Ajouter une capture d'écran
                 </button>
               )}
@@ -540,7 +495,7 @@ function SupportPage() {
             </div>
 
             {/* Boutons d'action */}
-            <div className="flex items-center justify-end gap-3 pt-3 border-t">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t">
               <Button
                 type="button"
                 variant="outline"

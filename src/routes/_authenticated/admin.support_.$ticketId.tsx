@@ -210,6 +210,8 @@ function AdminTicketDetailPage() {
   );
 
   const { ticket, messages } = data;
+  const merchantEmail = data.merchant_email;
+  const merchantWhatsapp = data.merchant_whatsapp;
   const shop = (ticket as any).shops as { name: string; slug: string; whatsapp: string | null } | null;
   const siteUrl = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -368,11 +370,17 @@ function AdminTicketDetailPage() {
             </div>
             <div>
               <p className="text-xs text-muted-foreground">E-mail contact</p>
-              <p className="font-medium break-all">{ticket.contact_email || "—"}</p>
+              {merchantEmail
+                ? <a href={`mailto:${merchantEmail}`} className="font-medium text-xs break-all text-primary hover:underline">{merchantEmail}</a>
+                : <p className="font-medium">—</p>
+              }
             </div>
             <div>
               <p className="text-xs text-muted-foreground">WhatsApp contact</p>
-              <p className="font-medium">{ticket.contact_whatsapp || "—"}</p>
+              {merchantWhatsapp
+                ? <a href={`https://wa.me/${merchantWhatsapp.replace(/\D/g, "")}`} target="_blank" rel="noreferrer" className="font-medium text-xs text-green-600 hover:underline">{merchantWhatsapp}</a>
+                : <p className="font-medium">—</p>
+              }
             </div>
             {shop?.slug && (
               <a

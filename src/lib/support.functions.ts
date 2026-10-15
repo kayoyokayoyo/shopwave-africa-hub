@@ -193,7 +193,25 @@ export const getTicketDetail = createServerFn({ method: "GET" })
     const { data: isAdminData } = await sb.rpc("has_role", { _user_id: userId, _role: "admin" });
     if (!isOwner && !isAdminData) throw new Error("Accès interdit.");
 
-    // Messages (sans notes internes pour le commerçant)
+    // Récupérer les vraies coordonnées du commerçant pour l'admin
+    let merchant_email: string | null = ticket.contact_email || null;
+    let merchant_whatsapp: string | null = ticket.contact_whatsapp || null;
+    if (isAdminData) {
+      const shop = (ticket as any).shops;
+      // WhatsApp : priorité shop.whatsapp
+      if (shop?.whatsapp) {
+        merchant_whatsapp = shop.whatsapp;
+      }
+      // Email : depuis auth si pas déjà renseigné
+      if (!merchant_email) {
+        try {
+          const { data: authUser } = await sb.auth.admin.getUserById(ticket.merchant_id);
+          merchant_email = authUser?.user?.email ?? null;
+        } catch {}
+      }
+    }
+
+    // Messages (sans notes internes pour le commercant)
     const { data: messages } = await sb
       .from("support_messages")
       .select("*, support_attachments(id, chemin, mime_type, taille)")
@@ -204,7 +222,7 @@ export const getTicketDetail = createServerFn({ method: "GET" })
       (m: any) => isAdminData || !m.note_interne
     );
 
-    // Marquer les messages admin comme lus pour le commerçant
+    // Marquer les messages admin comme lus pour le commercant
     if (isOwner) {
       const unreadIds = (messages ?? [])
         .filter((m: any) => m.auteur === "admin" && !m.lu_le && !m.note_interne)
@@ -217,7 +235,12 @@ export const getTicketDetail = createServerFn({ method: "GET" })
       }
     }
 
-    return { ticket: ticket as SupportTicket, messages: filteredMessages as SupportMessage[] };
+    return {
+      ticket: ticket as SupportTicket,
+      messages: filteredMessages as SupportMessage[],
+      merchant_email,
+      merchant_whatsapp,
+    };
   });
 
 // ─── 4. Répondre à un ticket (commerçant ou admin) ────────────────────────
@@ -415,10 +438,25 @@ export const getAttachmentSignedUrl = createServerFn({ method: "GET" })
     const sb = supabaseAdmin;
     const userId = (context as any).userId;
 
-    // Vérifier que le chemin appartient à l'utilisateur ou que c'est un admin
+    // Vérifier accès : admin → toujours autorisé
+    // Commerçant → autoriser si la pièce jointe est liée à un ticket qui lui appartient
     const { data: isAdminData } = await sb.rpc("has_role", { _user_id: userId, _role: "admin" });
-    const pathParts = data.chemin.split("/");
-    if (!isAdminData && pathParts[0] !== userId) throw new Error("Accès interdit.");
+
+    if (!isAdminData) {
+      // Vérifier que cette pièce jointe appartient à un ticket du commerçant
+      const { data: attachment } = await sb
+        .from("support_attachments")
+        .select("id, support_messages(ticket_id, support_tickets(merchant_id))")
+        .eq("chemin", data.chemin)
+        .maybeSingle();
+
+      const merchantId = (attachment as any)
+        ?.support_messages?.support_tickets?.merchant_id;
+
+      if (!attachment || merchantId !== userId) {
+        throw new Error("Accès interdit.");
+      }
+    }
 
     const { data: signed, error } = await sb.storage
       .from("support-attachments")
