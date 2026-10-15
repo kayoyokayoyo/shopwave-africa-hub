@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Check, MessageCircle, Palette, Smartphone, Store, Zap, ArrowRight,
-  TrendingUp, Users, ShieldCheck, Menu, X, Sparkles, Layers, DollarSign,
+  TrendingUp, Users, ShieldCheck, Menu, X, Sparkles, Layers, CreditCard,
   LogIn, Tag, Megaphone, BarChart3, Globe2, BadgePercent, Star, Clock,
   Facebook, Instagram, Share2, Gift, Rocket,
 } from "lucide-react";
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useEffect, useState, useRef } from "react";
+import { formatCDF } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/")(({
   head: () => ({
@@ -245,7 +246,7 @@ function Index() {
                 { href: "#promotions", icon: BadgePercent, label: "Promotions", color: "text-rose-500" },
                 { href: "#meta", icon: Facebook, label: "Meta / Réseaux", color: "text-[#1877F2]" },
                 { href: "#how-it-works", icon: Layers, label: "Comment ça marche", color: "text-blue-500" },
-                { href: "#pricing", icon: DollarSign, label: "Tarifs", color: "text-emerald-500" },
+                { href: "#pricing", icon: CreditCard, label: "Tarifs", color: "text-emerald-500" },
               ].map(({ href, icon: Icon, label, color }) => (
                 <a
                   key={href}
@@ -695,66 +696,73 @@ function Index() {
         <section id="pricing" className="py-24 scroll-mt-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <ScrollReveal direction="up" className="text-center">
-              <SectionBadge><DollarSign className="h-3.5 w-3.5" /> Tarifs</SectionBadge>
+              <SectionBadge><CreditCard className="h-3.5 w-3.5" /> Tarifs</SectionBadge>
               <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">Des tarifs transparents</h2>
               <p className="mt-4 text-lg text-muted-foreground">Commencez gratuitement, passez à la vitesse supérieure quand vous êtes prêt.</p>
             </ScrollReveal>
 
             <div className="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3 lg:gap-12 max-w-4xl mx-auto">
-              {plans.map((p, i) => (
-                <ScrollReveal key={p.id} delay={i * 100} direction="up">
-                  <div className={cn(
-                    "relative flex h-full flex-col rounded-3xl border bg-card p-8",
-                    p.id === "pro" ? "border-primary/50 shadow-2xl shadow-primary/10" : "shadow-sm hover:shadow-md transition-shadow"
-                  )}>
-                    {p.id === "pro" && (
-                      <span className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-sm font-bold tracking-wide text-primary-foreground shadow-sm">
-                        RECOMMANDÉ
-                      </span>
-                    )}
+              {plans.map((p, i) => {
+                const priceCdf = Number((p as any).price_cdf ?? 0);
+                const isFree = priceCdf === 0;
 
-                    <h3 className="text-2xl font-bold">{p.name}</h3>
-                    <p className="mt-4 font-display text-5xl font-extrabold">
-                      {Number(p.price_usd) === 0 ? "Gratuit" : `${p.price_usd} $`}
-                      <span className="text-lg font-normal text-muted-foreground">{Number(p.price_usd) ? " /mois" : ""}</span>
-                    </p>
+                return (
+                  <ScrollReveal key={p.id} delay={i * 100} direction="up">
+                    <div className={cn(
+                      "relative flex h-full flex-col rounded-3xl border bg-card p-8",
+                      p.id === "pro" ? "border-primary/50 shadow-2xl shadow-primary/10" : "shadow-sm hover:shadow-md transition-shadow"
+                    )}>
+                      {p.id === "pro" && (
+                        <span className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-primary px-4 py-1 text-sm font-bold tracking-wide text-primary-foreground shadow-sm">
+                          RECOMMANDÉ
+                        </span>
+                      )}
 
-                    <ul className="mt-8 flex-1 space-y-3">
-                      {[
-                        { show: true, text: p.max_products ? `${p.max_products} produits` : "Produits illimités", strong: true },
-                        { show: Boolean(p.max_photos), text: `${p.max_photos} photos par produit` },
-                        { 
-                          show: true, 
-                          text: (p as any).max_active_promotions 
-                            ? `${(p as any).max_active_promotions} promotions actives max` 
-                            : "Promotions actives illimitées" 
-                        },
-                        { show: p.meta_access, text: "Accès API Meta (Facebook & Instagram)" },
-                        { show: p.advanced_themes, text: "Thèmes avancés" },
-                        { show: p.advanced_stats, text: "Statistiques Pro" },
-                        { show: true, text: "Commandes WhatsApp directes" },
-                      ].filter(f => f.show).map(f => (
-                        <li key={f.text} className="flex items-center gap-3">
-                          <div className="rounded-full bg-primary/10 p-1 shrink-0">
-                            <Check className="h-3.5 w-3.5 text-primary" />
-                          </div>
-                          <span className={cn("text-sm", f.strong ? "font-semibold" : "text-muted-foreground")}>{f.text}</span>
-                        </li>
-                      ))}
-                    </ul>
+                      <h3 className="text-2xl font-bold">{p.name}</h3>
+                      <p className="mt-4 font-display text-4xl sm:text-5xl font-extrabold">
+                        {isFree ? "Gratuit" : formatCDF(priceCdf)}
+                        <span className="text-lg font-normal text-muted-foreground">{!isFree ? " /mois" : ""}</span>
+                      </p>
 
-                    <Button
-                      asChild
-                      className="mt-8 w-full rounded-full h-12 text-base font-bold"
-                      variant={p.price_usd && Number(p.price_usd) > 0 ? "default" : "outline"}
-                    >
-                      <Link to="/auth" search={{ mode: "signup" }}>
-                        {Number(p.price_usd) === 0 ? "Commencer gratuitement" : `Choisir ${p.name}`}
-                      </Link>
-                    </Button>
-                  </div>
-                </ScrollReveal>
-              ))}
+                      <ul className="mt-8 flex-1 space-y-3">
+                        {[
+                          { show: true, text: p.max_products != null ? `Jusqu'à ${p.max_products} produits` : "Produits illimités", strong: true },
+                          { show: Boolean(p.max_photos), text: `${p.max_photos ?? 3} photos par produit` },
+                          { 
+                            show: true, 
+                            text: (p as any).max_active_promotions === 0
+                              ? "0 promotion incluse"
+                              : (p as any).max_active_promotions != null 
+                                ? `${(p as any).max_active_promotions} promotions actives max` 
+                                : "Promotions actives illimitées" 
+                          },
+                          { show: Boolean(p.meta_access), text: "Accès API Meta (Facebook & Instagram)" },
+                          { show: Boolean(p.advanced_themes), text: "Thèmes avancés" },
+                          { show: Boolean(p.advanced_stats), text: "Statistiques Pro" },
+                          { show: true, text: "Commandes WhatsApp directes" },
+                        ].filter(f => f.show).map(f => (
+                          <li key={f.text} className="flex items-center gap-3">
+                            <div className="rounded-full bg-primary/10 p-1 shrink-0">
+                              <Check className="h-3.5 w-3.5 text-primary" />
+                            </div>
+                            <span className={cn("text-sm", f.strong ? "font-semibold" : "text-muted-foreground")}>{f.text}</span>
+                          </li>
+                        ))}
+                      </ul>
+
+                      <Button
+                        asChild
+                        className="mt-8 w-full rounded-full h-12 text-base font-bold"
+                        variant={isFree ? "outline" : "default"}
+                      >
+                        <Link to="/auth" search={{ mode: "signup" }}>
+                          {isFree ? "Commencer gratuitement" : `Choisir ${p.name}`}
+                        </Link>
+                      </Button>
+                    </div>
+                  </ScrollReveal>
+                );
+              })}
             </div>
           </div>
         </section>

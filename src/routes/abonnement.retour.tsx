@@ -4,7 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2, XCircle, Clock, RefreshCw, ArrowLeft, Receipt, FileDown, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPaymentStatus } from "@/lib/subscriptions.functions";
-import { formatUSD } from "@/lib/subscriptions";
+import { formatCDF } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/abonnement/retour")({
   head: () => ({
@@ -225,18 +225,18 @@ function PaymentReturnPage() {
               <ReceiptRow label="Plan souscrit" value={`${planLabel} (${periodLabel})`} />
               <ReceiptRow
                 label="Montant facturé"
-                value={formatUSD(data.montant_usd ?? data.montant_cdf ?? 0)}
+                value={formatCDF(data.montant_cdf ?? 0)}
               />
               {data.montant_debite != null && (
                 <ReceiptRow
                   label="Montant débité"
-                  value={formatUSD(data.montant_debite)}
+                  value={formatCDF(data.montant_debite)}
                 />
               )}
               {data.frais != null && data.frais > 0 && (
                 <ReceiptRow
                   label="Frais de paiement"
-                  value={formatUSD(data.frais)}
+                  value={formatCDF(data.frais)}
                   muted
                 />
               )}

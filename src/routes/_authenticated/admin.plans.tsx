@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { logAction } from "@/hooks/useIsAdmin";
+import { formatCDF } from "@/lib/subscriptions";
 import {
   Package, Facebook, Palette, BarChart3, CheckCircle2, Box,
   Image as ImageIcon, Save, Plus, Zap, Edit2, X, Trash2, Tag,
@@ -66,8 +67,8 @@ function PlansPage() {
     return {
       total: list.length,
       active: list.filter((p) => p.active).length,
-      free: list.filter((p) => (p.price_usd ?? 0) === 0).length,
-      paid: list.filter((p) => (p.price_usd ?? 0) > 0).length,
+      free: list.filter((p) => ((p as any).price_cdf ?? p.price_usd ?? 0) === 0).length,
+      paid: list.filter((p) => ((p as any).price_cdf ?? p.price_usd ?? 0) > 0).length,
     };
   }, [plans]);
 
@@ -82,7 +83,8 @@ function PlansPage() {
       const { error } = await supabase.from("plans").insert({
         id: generatedId,
         name: newPlanName.trim(),
-        price_usd: priceNum,
+        price_cdf: priceNum,
+        price_usd: 0,
         max_products: 20,
         max_photos: 5,
         active: true,
@@ -167,21 +169,21 @@ function PlansPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">Prix mensuel (USD)</Label>
+                  <Label className="text-xs font-semibold">Prix mensuel (FC / CDF)</Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">FC</span>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="1000"
                       min="0"
-                      placeholder="0.00"
+                      placeholder="25000"
                       value={newPlanPrice}
                       onChange={(e) => setNewPlanPrice(e.target.value)}
-                      className="rounded-xl h-10 pl-8 font-mono font-bold"
+                      className="rounded-xl h-10 pl-10 font-mono font-bold"
                     />
                   </div>
                   <p className="text-[11px] text-muted-foreground">
-                    Laissez 0 pour proposer une formule gratuite.
+                    Indiquez le montant en Francs Congolais (laissez 0 pour gratuit).
                   </p>
                 </div>
               </div>
@@ -234,7 +236,7 @@ function PlansPage() {
         <MetricCard
           label="Plans Payants"
           value={stats.paid}
-          subtext="Abonnements premium USD"
+          subtext="Abonnements premium FC"
           icon={Zap}
           accent="primary"
         />
@@ -277,7 +279,7 @@ function PlanCard({ plan }: { plan: Plan }) {
   const [confirmDelete, setConfirmDelete] = useState("");
   const queryClient = useQueryClient();
 
-  const isFree = (p.price_usd ?? 0) === 0;
+  const isFree = ((p as any).price_cdf ?? p.price_usd ?? 0) === 0;
 
   // Détermination de la couleur d'accent selon l'ID ou le prix
   const accentScheme = useMemo(() => {
@@ -309,7 +311,8 @@ function PlanCard({ plan }: { plan: Plan }) {
         .from("plans")
         .update({
           name: p.name,
-          price_usd: p.price_usd,
+          price_cdf: (p as any).price_cdf,
+          price_usd: 0,
           max_products: p.max_products,
           max_photos: p.max_photos,
           max_active_promotions: (p as any).max_active_promotions,
@@ -318,12 +321,12 @@ function PlanCard({ plan }: { plan: Plan }) {
           advanced_themes: p.advanced_themes,
           advanced_stats: p.advanced_stats,
           active: p.active,
-        })
+        } as any)
         .eq("id", p.id);
 
       if (error) throw error;
 
-      await logAction("plan.update", p.id, { price: p.price_usd, max_products: p.max_products });
+      await logAction("plan.update", p.id, { price_cdf: (p as any).price_cdf, max_products: p.max_products });
       toast.success(`Plan "${p.name}" mis à jour avec succès !`);
       queryClient.invalidateQueries({ queryKey: ["plans"] });
       queryClient.invalidateQueries({ queryKey: ["plans-active"] });
@@ -406,16 +409,16 @@ function PlanCard({ plan }: { plan: Plan }) {
           <div className="mt-2 flex items-baseline gap-1.5">
             {isEditing ? (
               <div className="w-full space-y-1 mt-2">
-                <Label className="text-[11px] font-semibold text-muted-foreground uppercase">Prix mensuel (USD)</Label>
+                <Label className="text-[11px] font-semibold text-muted-foreground uppercase">Prix mensuel (FC / CDF)</Label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold">$</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-bold text-xs">FC</span>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="1000"
                     min="0"
-                    value={p.price_usd ?? 0}
-                    onChange={(e) => setP({ ...p, price_usd: Number(e.target.value) || 0 })}
-                    className="font-mono font-bold text-base h-10 rounded-xl pl-8"
+                    value={(p as any).price_cdf ?? 0}
+                    onChange={(e) => setP({ ...p, price_cdf: Number(e.target.value) || 0 } as any)}
+                    className="font-mono font-bold text-base h-10 rounded-xl pl-10"
                   />
                 </div>
               </div>
@@ -427,7 +430,7 @@ function PlanCard({ plan }: { plan: Plan }) {
             ) : (
               <div className="flex items-baseline gap-1">
                 <span className="text-2xl font-black text-foreground tracking-tight">
-                  {p.price_usd} $
+                  {formatCDF((p as any).price_cdf ?? 0)}
                 </span>
                 <span className="text-xs text-muted-foreground font-medium">/ mois</span>
               </div>

@@ -57,7 +57,7 @@ import {
   adminAssignPlan,
   adminGetPaymentEvents,
 } from "@/lib/subscriptions.functions";
-import { formatUSD, type SubscriptionPeriod } from "@/lib/subscriptions";
+import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_authenticated/admin/paiements")({
@@ -290,9 +290,9 @@ function AdminPaymentsPage() {
 
   // Compute Metrics (Option 2 : Séparation Encaissé SasPay vs Attributions Admin)
   const metrics = useMemo(() => {
-    let saspayCollectedUSD = 0;
+    let saspayCollectedCDF = 0;
     let saspayPaidCount = 0;
-    let assignedValueUSD = 0;
+    let assignedValueCDF = 0;
     let assignedCount = 0;
     let pendingCount = 0;
     let failedCount = 0;
@@ -301,15 +301,15 @@ function AdminPaymentsPage() {
 
     for (const p of allPayments) {
       const s = getNormalizedStatus(p);
-      const amount = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
+      const amount = Number(p.montant_cdf ?? p.amount ?? 0);
       const attributed = isPaymentAttributed(p);
 
       if (attributed) {
         assignedCount++;
-        assignedValueUSD += amount;
+        assignedValueCDF += amount;
       } else if (s === "payé") {
         saspayPaidCount++;
-        saspayCollectedUSD += amount;
+        saspayCollectedCDF += amount;
       } else if (s === "en_attente") {
         pendingCount++;
       } else if (s === "échoué") {
@@ -322,16 +322,16 @@ function AdminPaymentsPage() {
     }
 
     return {
-      saspayCollectedUSD,
+      saspayCollectedCDF,
       saspayPaidCount,
-      assignedValueUSD,
+      assignedValueCDF,
       assignedCount,
       pendingCount,
       failedCount,
       toReviewCount,
       cancelledCount,
       totalCount: allPayments.length,
-      totalCombinedUSD: saspayCollectedUSD + assignedValueUSD,
+      totalCombinedCDF: saspayCollectedCDF + assignedValueCDF,
     };
   }, [allPayments]);
 
@@ -429,14 +429,14 @@ function AdminPaymentsPage() {
         <MetricCard
           accent="green"
           title="Encaissé SasPay (Réel)"
-          value={formatUSD(metrics.saspayCollectedUSD)}
+          value={formatCDF(metrics.saspayCollectedCDF)}
           subtitle={`${metrics.saspayPaidCount} paiement(s) mobile money`}
           icon={<DollarSign className="h-4 w-4" />}
         />
         <MetricCard
           accent="blue"
           title="Attributions Admin"
-          value={formatUSD(metrics.assignedValueUSD)}
+          value={formatCDF(metrics.assignedValueCDF)}
           subtitle={`${metrics.assignedCount} plan(s) attribué(s)`}
           icon={<Sparkles className="h-4 w-4" />}
         />
@@ -451,7 +451,7 @@ function AdminPaymentsPage() {
           accent="primary"
           title="Total Transactions"
           value={metrics.totalCount}
-          subtitle={`Volume global (${formatUSD(metrics.totalCombinedUSD)})`}
+          subtitle={`Volume global (${formatCDF(metrics.totalCombinedCDF)})`}
           icon={<CreditCard className="h-4 w-4" />}
         />
       </div>
@@ -590,7 +590,7 @@ function AdminPaymentsPage() {
                 <div className="divide-y divide-border/60">
                   {paginatedPayments.map((p: any) => {
                     const effectiveStatut = getNormalizedStatus(p);
-                    const amountUSD = Number(p.montant_usd ?? p.montant_cdf ?? p.amount ?? 0);
+                    const amountCDF = Number(p.montant_cdf ?? p.amount ?? 0);
 
                     const isAttributed =
                       (p.methode === "manuel" || p.method === "manuel" || p.method === "cash" || p.admin_note?.includes("Attribution")) &&
@@ -693,7 +693,7 @@ function AdminPaymentsPage() {
                         {/* Colonne droite : Montant + Statut + Actions manuelles éventuelles + Chevron */}
                         <div className="flex items-center gap-3 shrink-0 text-right">
                           <div>
-                            <p className="font-black text-sm text-foreground">{formatUSD(amountUSD)}</p>
+                            <p className="font-black text-sm text-foreground">{formatCDF(amountCDF)}</p>
                             <p className={cn("text-[11px]", statusColor)}>{statusLabel}</p>
                           </div>
 
@@ -883,7 +883,7 @@ function AdminPaymentsPage() {
                 <div>
                   <span className="text-muted-foreground">Montant total</span>
                   <p className="font-bold text-base text-primary">
-                    {formatUSD(selectedPayment.montant_usd ?? selectedPayment.montant_cdf ?? (selectedPayment.amount || 0))}
+                    {formatCDF(Number(selectedPayment.montant_cdf ?? selectedPayment.amount ?? 0))}
                   </p>
                 </div>
                 <div>
@@ -949,13 +949,13 @@ function AdminPaymentsPage() {
                 {selectedPayment.frais != null && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Frais :</span>
-                    <span>{formatUSD(selectedPayment.frais)}</span>
+                    <span>{formatCDF(selectedPayment.frais)}</span>
                   </div>
                 )}
                 {selectedPayment.montant_net != null && (
                   <div className="flex justify-between font-bold">
                     <span>Montant net :</span>
-                    <span>{formatUSD(selectedPayment.montant_net)}</span>
+                    <span>{formatCDF(selectedPayment.montant_net)}</span>
                   </div>
                 )}
               </div>

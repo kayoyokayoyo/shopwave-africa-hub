@@ -11,7 +11,7 @@ const mockInvoice: InvoiceData = {
   merchantName: "Jean Dupont",
   planName: "Plan BUSINESS",
   period: "Mensuel (30 jours)",
-  amountUSD: 10,
+  amountCDF: 25000,
   paymentDate: "14 octobre 2026, 15:30",
   validUntil: "14 novembre 2026",
   paymentMethod: "SasPay (Airtel Money)",
@@ -23,7 +23,7 @@ describe("Système de facturation & PDF", () => {
     const html = buildInvoiceHtml(mockInvoice);
     expect(html).toContain("MN-TEST1234");
     expect(html).toContain("Boutique Congo Express");
-    expect(html).toContain("10 $");
+    expect(html).toContain("25 000 FC");
     expect(html).toContain("ACQUITTÉE");
   });
 

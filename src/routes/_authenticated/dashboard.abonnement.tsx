@@ -55,7 +55,7 @@ import {
   getPlanPrices,
   createCheckoutSession,
 } from "@/lib/subscriptions.functions";
-import { formatUSD, type SubscriptionPeriod } from "@/lib/subscriptions";
+import { formatCDF, type SubscriptionPeriod } from "@/lib/subscriptions";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -137,13 +137,35 @@ function PlanCardSkeleton() {
   );
 }
 
+function SubscriptionErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
+  return (
+    <div className="mx-auto max-w-4xl p-6 my-8 rounded-3xl border bg-card text-center space-y-4">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
+        <AlertCircle className="h-6 w-6" />
+      </div>
+      <div>
+        <h2 className="text-xl font-bold">Impossible de charger la page d'abonnement</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {error instanceof Error ? error.message : "Une erreur de chargement est survenue. Veuillez vérifier votre session ou rafraîchir."}
+        </p>
+      </div>
+      <div className="flex justify-center gap-3">
+        <Button onClick={() => reset()} variant="default" className="rounded-xl">
+          <RefreshCw className="mr-2 h-4 w-4" /> Réessayer
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export const Route = createFileRoute("/_authenticated/dashboard/abonnement")({
   head: () => ({
     meta: [
       { title: "Mon Abonnement & Paiements — MarketNet" },
-      { name: "description", content: "Gérez votre formule d'abonnement MarketNet et payez en USD ($) via SasPay." },
+      { name: "description", content: "Gérez votre formule d'abonnement MarketNet et payez en Francs Congolais (FC) via SasPay." },
     ],
   }),
+  errorComponent: SubscriptionErrorComponent,
   component: DashboardAbonnementPage,
 });
 
@@ -204,7 +226,7 @@ function DashboardAbonnementPage() {
         .from("plans")
         .select("*")
         .eq("active", true)
-        .order("price_usd", { ascending: true });
+        .order("position", { ascending: true });
       if (error) throw error;
       return data ?? [];
     },
@@ -308,7 +330,7 @@ function DashboardAbonnementPage() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Mon Abonnement</h1>
           <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
-            Choisissez la formule adaptée à la croissance de votre boutique et réglez en Dollars ($ USD).
+            Choisissez la formule adaptée à la croissance de votre boutique et réglez en Francs Congolais (FC).
           </p>
         </div>
       </div>
@@ -546,21 +568,21 @@ function DashboardAbonnementPage() {
                       <span className="font-extrabold text-lg">{plan.name}</span>
                     </div>
 
-                    {/* Prix — strictement en Dollars ($ USD) */}
+                    {/* Prix — strictement en Franc Congolais (FC) */}
                     <div>
                       {isFree ? (
                         <>
-                          <span className="text-3xl font-black">0 $</span>
+                          <span className="text-3xl font-black">Gratuit</span>
                           <span className="text-xs text-muted-foreground ml-1">/toujours</span>
                         </>
-                      ) : (price != null || plan.price_usd != null) ? (
+                      ) : (price?.price_cdf != null || (plan as any).price_cdf != null) ? (
                         <>
                           <span className="text-3xl font-black">
-                            {formatUSD(
-                              price?.price_usd ??
+                            {formatCDF(
+                              price?.price_cdf ??
                               (selectedPeriod === "mensuel"
-                                ? (plan.price_usd ?? 0)
-                                : (plan.price_usd ?? 0) * 10)
+                                ? ((plan as any).price_cdf ?? 0)
+                                : ((plan as any).price_cdf ?? 0) * 10)
                             )}
                           </span>
                           <span className="text-xs text-muted-foreground ml-1">
@@ -704,7 +726,7 @@ function DashboardAbonnementPage() {
             <div className="divide-y divide-border/60 rounded-2xl border bg-card overflow-hidden">
               {paginatedHistory.map((pay) => {
                 const status = resolvePaymentStatus(pay);
-                const amountUSD = Number(pay.montant_usd ?? pay.montant_cdf ?? pay.amount ?? 0);
+                const amountCDF = Number(pay.montant_cdf ?? pay.amount ?? 0);
 
                 const statusDot = {
                   payé: "bg-emerald-500",
@@ -757,7 +779,7 @@ function DashboardAbonnementPage() {
 
                     <div className="flex items-center gap-3 shrink-0 text-right">
                       <div>
-                        <p className="font-black text-sm text-foreground">{formatUSD(amountUSD)}</p>
+                        <p className="font-black text-sm text-foreground">{formatCDF(amountCDF)}</p>
                         <p className={cn("text-[11px]", statusColor)}>{statusLabel}</p>
                       </div>
 
@@ -876,8 +898,8 @@ function DashboardAbonnementPage() {
 
           {selectedReceipt && (() => {
             const status = resolvePaymentStatus(selectedReceipt);
-            const amountUSD = Number(
-              selectedReceipt.montant_usd ?? selectedReceipt.montant_cdf ?? selectedReceipt.amount ?? 0
+            const amountCDF = Number(
+              selectedReceipt.montant_cdf ?? selectedReceipt.amount ?? 0
             );
 
             const statusConfig = {
@@ -910,7 +932,7 @@ function DashboardAbonnementPage() {
                 {/* Montant & Statut */}
                 <div className="text-center space-y-1.5 py-4 rounded-2xl bg-muted/30 border border-border/50">
                   <p className="text-3xl sm:text-4xl font-black text-foreground tracking-tight">
-                    {formatUSD(amountUSD)}
+                    {formatCDF(amountCDF)}
                   </p>
                   <div className="flex items-center justify-center">
                     <span className={cn("inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-semibold border", statusConfig.badgeClass)}>

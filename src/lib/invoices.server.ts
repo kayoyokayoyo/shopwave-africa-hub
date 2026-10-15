@@ -1,7 +1,7 @@
 import nodemailer from "nodemailer";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { formatUSD } from "@/lib/subscriptions";
+import { formatCDF } from "@/lib/subscriptions";
 
 export interface InvoiceData {
   invoiceNumber: string;
@@ -13,7 +13,7 @@ export interface InvoiceData {
   merchantName: string;
   planName: string;
   period: string;
-  amountUSD: number;
+  amountCDF: number;
   paymentDate: string;
   validUntil: string;
   paymentMethod: string;
@@ -72,7 +72,7 @@ export async function getInvoiceData(paymentId: string): Promise<InvoiceData | n
   }
 
   const invoiceNumber = `MN-${payment.id.slice(0, 8).toUpperCase()}`;
-  const amountUSD = Number((payment as any).montant_usd ?? payment.montant_cdf ?? payment.amount ?? 0);
+  const amountCDF = Number((payment as any).montant_cdf ?? payment.amount ?? 0);
   const paymentDate = new Date(payment.paye_le || payment.cree_le).toLocaleString("fr-FR", {
     day: "numeric",
     month: "long",
@@ -101,7 +101,7 @@ export async function getInvoiceData(paymentId: string): Promise<InvoiceData | n
     merchantName,
     planName: `Plan ${(payment.plan_id || "Pro").toUpperCase()}`,
     period: payment.period === "annuel" ? "Annuel (1 an)" : "Mensuel (30 jours)",
-    amountUSD,
+    amountCDF,
     paymentDate,
     validUntil: validUntilFormatted,
     paymentMethod: payment.methode === "saspay" ? "SasPay (Mobile Money / Carte)" : (payment.methode || "SasPay"),
@@ -231,15 +231,15 @@ export function buildInvoiceHtml(inv: InvoiceData): string {
                 ${inv.period}
               </td>
               <td align="right" style="padding: 14px 0; font-size: 15px; font-weight: 700; color: #0f172a;">
-                ${formatUSD(inv.amountUSD)}
+                ${formatCDF(inv.amountCDF)}
               </td>
             </tr>
             <tr>
               <td colspan="2" align="right" style="padding: 16px 0 8px; font-size: 14px; font-weight: 600; color: #475569;">
-                Total Réglé (USD) :
+                Total Réglé (FC) :
               </td>
               <td align="right" style="padding: 16px 0 8px; font-size: 20px; font-weight: 900; color: #0f172a;">
-                ${formatUSD(inv.amountUSD)}
+                ${formatCDF(inv.amountCDF)}
               </td>
             </tr>
           </tbody>
@@ -425,8 +425,7 @@ export async function generateInvoicePdf(inv: InvoiceData): Promise<Buffer> {
   page.drawText(cleanPdfText(`Abonnement ${inv.planName}`), { x: 55, y: 505, size: 11, font: fontBold, color: darkNavy });
   page.drawText(cleanPdfText(`Boutique en ligne : ${inv.shopName}`), { x: 55, y: 488, size: 8, font: fontRegular, color: slate });
   page.drawText(cleanPdfText(inv.period), { x: 260, y: 498, size: 9, font: fontRegular, color: darkNavy });
-  page.drawText(cleanPdfText(`Jusqu'au ${inv.validUntil}`), { x: 360, y: 498, size: 9, font: fontRegular, color: emerald });
-  page.drawText(`$${inv.amountUSD.toFixed(2)}`, { x: 475, y: 498, size: 11, font: fontBold, color: darkNavy });
+  page.drawText(cleanPdfText(formatCDF(inv.amountCDF)), { x: 440, y: 498, size: 10, font: fontBold, color: darkNavy });
 
   // Ligne Total
   page.drawRectangle({
@@ -438,8 +437,8 @@ export async function generateInvoicePdf(inv: InvoiceData): Promise<Buffer> {
     borderColor: borderCol,
     borderWidth: 1,
   });
-  page.drawText("TOTAL REGLE (USD) :", { x: 280, y: 442, size: 10, font: fontBold, color: slate });
-  page.drawText(`$${inv.amountUSD.toFixed(2)}`, { x: 460, y: 440, size: 15, font: fontBold, color: darkNavy });
+  page.drawText("TOTAL REGLE (FC) :", { x: 280, y: 442, size: 10, font: fontBold, color: slate });
+  page.drawText(cleanPdfText(formatCDF(inv.amountCDF)), { x: 420, y: 440, size: 14, font: fontBold, color: darkNavy });
 
   // Encadré de confirmation d'activation
   page.drawRectangle({

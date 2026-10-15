@@ -269,21 +269,16 @@ export function identifyExcessItemsToPause(params: {
   return { productIdsToHide, promotionIdsToPause };
 }
 
-/** Formatage standard des montants en Dollars ($ USD) pour les abonnements */
-export function formatUSD(amount: number): string {
+/** Formatage standard des montants en Franc Congolais (FC / CDF) pour les abonnements et factures */
+export function formatCDF(amount: number): string {
   const formatted = new Intl.NumberFormat("fr-FR", {
-    minimumFractionDigits: amount % 1 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(amount);
-  return `${formatted} $`;
+    maximumFractionDigits: 0,
+  }).format(amount).replace(/[\u202F\u00A0]/g, " ");
+  return `${formatted} FC`;
 }
 
-/** Formatage CDF pour les transactions de boutiques locales si nécessaire */
-export function formatCDF(amount: number): string {
-  return new Intl.NumberFormat("fr-CD", {
-    style: "currency",
-    currency: "CDF",
-    maximumFractionDigits: 0,
-  }).format(amount);
+/** Alias rétro-compatible redirigeant vers formatCDF (Franc Congolais) */
+export function formatUSD(amount: number): string {
+  return formatCDF(amount);
 }
 

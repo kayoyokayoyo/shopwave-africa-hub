@@ -307,9 +307,9 @@ export const Route = createFileRoute("/api/public/webhook-saspay")({
               });
             }
 
-            // Extraction des montants et devise (strictement USD)
+            // Extraction des montants et devise (strictement Franc Congolais - CDF)
             const rawCurrency =
-              (eventData["currency"] as string) || (parsedBody["currency"] as string) || "USD";
+              (eventData["currency"] as string) || (parsedBody["currency"] as string) || "CDF";
             const currency = rawCurrency.toUpperCase().trim();
             const rawAmount =
               eventData["amount"] ?? parsedBody["amount"] ?? null;
@@ -325,9 +325,9 @@ export const Route = createFileRoute("/api/public/webhook-saspay")({
             const chargedNum = rawCharged !== null ? Number(rawCharged) : null;
             const feeNum = rawFee !== null ? Number(rawFee) : null;
 
-            // Contrôle 1 : Devise doit être USD
-            if (currency !== "USD") {
-              const note = `Devise inattendue : ${currency} au lieu de USD.`;
+            // Contrôle 1 : Devise doit être CDF (ou FC)
+            if (currency !== "CDF" && currency !== "FC") {
+              const note = `Devise inattendue : ${currency} au lieu de CDF.`;
               await supabaseAdmin
                 .from("subscription_payments")
                 .update({
@@ -356,17 +356,17 @@ export const Route = createFileRoute("/api/public/webhook-saspay")({
               });
             }
 
-            // Contrôle 2 : Montant cohérent avec le prix attendu du plan ($ USD)
+            // Contrôle 2 : Montant cohérent avec le prix attendu du plan (Franc Congolais - CDF)
             // Compare amount ou net_amount au prix attendu, JAMAIS charged seul (car il contient les frais)
-            const expectedPrice = Number(paymentRecord.montant_usd ?? paymentRecord.montant_cdf);
+            const expectedPrice = Number(paymentRecord.montant_cdf ?? paymentRecord.amount ?? 0);
             const candidateAmount = amountNum !== null ? amountNum : netAmountNum;
 
             const isAmountValid =
               candidateAmount !== null &&
-              Math.abs(candidateAmount - expectedPrice) <= 0.05; // tolérance 5 centimes USD
+              Math.abs(candidateAmount - expectedPrice) <= 100; // tolérance 100 FC
 
             if (!isAmountValid) {
-              const note = `Montant incohérent : attendu ${expectedPrice} USD, reçu amount=${amountNum}, net_amount=${netAmountNum}, charged=${chargedNum}.`;
+              const note = `Montant incohérent : attendu ${expectedPrice} FC, reçu amount=${amountNum}, net_amount=${netAmountNum}, charged=${chargedNum}.`;
               await supabaseAdmin
                 .from("subscription_payments")
                 .update({
