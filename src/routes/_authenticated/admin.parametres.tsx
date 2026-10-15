@@ -179,7 +179,7 @@ function Settings() {
                   <div className="rounded-lg bg-primary/10 p-2 text-primary"><CreditCard className="h-5 w-5" /></div>
                   <div>
                     <h2 className="font-semibold">Passerelle de paiement — SasPay</h2>
-                    <p className="text-xs text-muted-foreground">Les abonnements sont collectés automatiquement en USD via SasPay.</p>
+                    <p className="text-xs text-muted-foreground">Les abonnements sont collectés automatiquement en Franc Congolais (FC) via SasPay.</p>
                   </div>
                 </div>
                 <div className="p-6 space-y-4">
@@ -191,8 +191,8 @@ function Settings() {
                     </div>
                     <div className="rounded-xl border bg-muted/30 p-4 flex flex-col gap-1">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Devise</span>
-                      <span className="text-base font-black">USD ($)</span>
-                      <span className="text-[11px] text-muted-foreground">Dollar américain uniquement</span>
+                      <span className="text-base font-black">CDF (FC)</span>
+                      <span className="text-[11px] text-muted-foreground">Franc Congolais uniquement</span>
                     </div>
                     <div className="rounded-xl border bg-muted/30 p-4 flex flex-col gap-1">
                       <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Webhook</span>

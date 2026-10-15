@@ -399,7 +399,7 @@ function AdminPaymentsPage() {
             <CreditCard className="h-6 w-6 text-primary" /> Paiements & Abonnements
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Suivi des transactions, plans actifs et gestion des abonnements en USD ($) via SasPay.
+            Suivi des transactions, plans actifs et gestion des abonnements en Franc Congolais (FC) via SasPay.
           </p>
         </div>
 
@@ -431,7 +431,7 @@ function AdminPaymentsPage() {
           title="Encaissé SasPay (Réel)"
           value={formatCDF(metrics.saspayCollectedCDF)}
           subtitle={`${metrics.saspayPaidCount} paiement(s) mobile money`}
-          icon={<DollarSign className="h-4 w-4" />}
+          icon={<CreditCard className="h-4 w-4" />}
         />
         <MetricCard
           accent="blue"

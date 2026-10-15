@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, Store, Package, DollarSign, ArrowRight, TrendingUp, Calendar, ChevronDown, Sparkles } from "lucide-react";
+import { Users, Store, Package, CreditCard, ArrowRight, TrendingUp, Calendar, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { formatCDF } from "@/lib/subscriptions";
 
 export const Route = createFileRoute("/_authenticated/admin/")({ component: AdminHome });
 
@@ -46,16 +47,16 @@ function AdminHome() {
       
       const { data: pays } = await supabase
         .from("subscription_payments")
-        .select("amount,montant_debite,montant_net,status,statut,methode,method,admin_note,created_at");
+        .select("amount,montant_cdf,montant_debite,montant_net,status,statut,methode,method,admin_note,created_at");
 
       // Les paiements sont "payés" si status='approved' (SasPay) OU statut='payé' (manuel admin)
       const approvedPays = (pays ?? []).filter(
         (x) => x.status === "approved" || x.statut === "payé"
       );
 
-      // Priorité : montant_debite → montant_net → amount (colonnes selon la source du paiement)
+      // Priorité : montant_cdf → montant_debite → montant_net → amount (strictement en FC / CDF)
       const getAmount = (x: any) =>
-        Number(x.montant_debite ?? x.montant_net ?? x.amount ?? 0);
+        Number(x.montant_cdf ?? x.montant_debite ?? x.montant_net ?? x.amount ?? 0);
 
       // Option 2 : Séparation Encaissé SasPay vs Attributions Admin
       const isManual = (x: any) =>
@@ -93,9 +94,9 @@ function AdminHome() {
     { label: "Produits en ligne", value: data?.p, icon: Package, color: "text-pink-600", bg: "bg-pink-500/10", border: "border-pink-500/20" },
     {
       label: "Encaissé SasPay (Réel)",
-      value: data ? `${(data.saspayRevenue ?? 0).toFixed(2)} $` : undefined,
+      value: data ? formatCDF(data.saspayRevenue ?? 0) : undefined,
       sublabel: "100% réel · Solde SasPay",
-      icon: DollarSign,
+      icon: CreditCard,
       color: "text-emerald-600",
       bg: "bg-emerald-500/10",
       border: "border-emerald-500/20",
@@ -103,7 +104,7 @@ function AdminHome() {
     },
     {
       label: "Attributions Admin",
-      value: data ? `${(data.assignedValue ?? 0).toFixed(2)} $` : undefined,
+      value: data ? formatCDF(data.assignedValue ?? 0) : undefined,
       sublabel: data ? `${data.assignedCount ?? 0} plan(s) attribué(s)` : undefined,
       icon: Sparkles,
       color: "text-indigo-600",
@@ -205,7 +206,7 @@ function AdminHome() {
                   return (
                     <div key={i} className="flex-1 flex flex-col justify-end items-center group h-full relative z-10">
                       <div className="absolute -top-8 bg-foreground text-background text-xs font-bold py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                        {d.value.toFixed(2)} $
+                        {formatCDF(d.value)}
                       </div>
                       <div 
                         className="w-full max-w-[32px] bg-emerald-500/20 hover:bg-emerald-500 transition-all rounded-t-sm border-t border-emerald-500/50 relative overflow-hidden"

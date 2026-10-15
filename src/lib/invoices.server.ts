@@ -410,7 +410,7 @@ export async function generateInvoicePdf(inv: InvoiceData): Promise<Buffer> {
   page.drawText("DESCRIPTION", { x: 55, y: 535, size: 9, font: fontBold, color: slate });
   page.drawText("PERIODE", { x: 260, y: 535, size: 9, font: fontBold, color: slate });
   page.drawText("VALIDITE", { x: 360, y: 535, size: 9, font: fontBold, color: slate });
-  page.drawText("MONTANT (USD)", { x: 460, y: 535, size: 9, font: fontBold, color: slate });
+  page.drawText("MONTANT (FC)", { x: 460, y: 535, size: 9, font: fontBold, color: slate });
 
   // Ligne prestation
   page.drawRectangle({
@@ -869,7 +869,7 @@ export async function sendSubscriptionInvoiceEmail(params: {
     const mailOptions: Parameters<typeof transporter.sendMail>[0] = {
       from: `"${fromName}" <${fromEmail}>`,
       to: recipient,
-      subject: `[MarketNet] Votre facture de paiement — ${inv.planName} (${formatUSD(inv.amountUSD)})`,
+      subject: `[MarketNet] Votre facture de paiement — ${inv.planName} (${formatCDF(inv.amountCDF)})`,
       html: buildInvoiceHtml(inv),
       attachments: pdfBuffer
         ? [
