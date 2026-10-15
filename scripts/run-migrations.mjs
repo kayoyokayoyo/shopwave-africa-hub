@@ -1,6 +1,9 @@
 import { readFile, readdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
+import dns from "node:dns";
 import postgres from "postgres";
+
+dns.setDefaultResultOrder("ipv4first");
 
 function parseEnv(contents) {
   const values = {};

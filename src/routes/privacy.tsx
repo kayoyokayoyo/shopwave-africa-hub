@@ -84,6 +84,10 @@ function PrivacyPage() {
                   <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
                   <span><strong>Gestion commerciale :</strong> Historique des commandes reçues et statut de votre forfait d'abonnement.</span>
                 </li>
+                <li className="flex items-start gap-3 text-muted-foreground text-base sm:text-lg">
+                  <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+                  <span><strong>Assistance et Support :</strong> Les messages, descriptions de demandes et captures d'écran transmis lors de la soumission de tickets de support sont conservés pour traiter vos demandes d'aide et sont réservés exclusivement à notre équipe d'assistance.</span>
+                </li>
               </ul>
             </section>
 

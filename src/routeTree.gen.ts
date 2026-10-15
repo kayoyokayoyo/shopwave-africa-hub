@@ -27,6 +27,7 @@ import { Route as AuthenticatedAdminCommercantsRouteImport } from './routes/_aut
 import { Route as AuthenticatedAdminPaiementsRouteImport } from './routes/_authenticated/admin.paiements'
 import { Route as AuthenticatedAdminParametresRouteImport } from './routes/_authenticated/admin.parametres'
 import { Route as AuthenticatedAdminPlansRouteImport } from './routes/_authenticated/admin.plans'
+import { Route as AuthenticatedAdminSupportRouteImport } from './routes/_authenticated/admin.support'
 import { Route as AuthenticatedDashboardIndexRouteImport } from './routes/_authenticated/dashboard.index'
 import { Route as AuthenticatedDashboardAbonnementRouteImport } from './routes/_authenticated/dashboard.abonnement'
 import { Route as AuthenticatedDashboardBoutiqueRouteImport } from './routes/_authenticated/dashboard.boutique'
@@ -35,11 +36,16 @@ import { Route as AuthenticatedDashboardMetaRouteImport } from './routes/_authen
 import { Route as AuthenticatedDashboardProduitsRouteImport } from './routes/_authenticated/dashboard.produits'
 import { Route as AuthenticatedDashboardPromotionsRouteImport } from './routes/_authenticated/dashboard.promotions'
 import { Route as AuthenticatedDashboardReglagesRouteImport } from './routes/_authenticated/dashboard.reglages'
+import { Route as AuthenticatedDashboardSupportRouteImport } from './routes/_authenticated/dashboard.support'
+import { Route as ApiCronSubscriptionRemindersRouteImport } from './routes/api/cron/subscription-reminders'
 import { Route as ApiPublicInvoicePdfRouteImport } from './routes/api/public/invoice-pdf'
 import { Route as ApiPublicWebhookSaspayRouteImport } from './routes/api/public/webhook-saspay'
 import { Route as BSlugIndexRouteImport } from './routes/b.$slug.index'
 import { Route as AuthenticatedAdminBoutiquesShopIdRouteImport } from './routes/_authenticated/admin.boutiques_.$shopId'
+import { Route as AuthenticatedAdminSupportTicketIdRouteImport } from './routes/_authenticated/admin.support_.$ticketId'
 import { Route as AuthenticatedDashboardCommandesOrderIdRouteImport } from './routes/_authenticated/dashboard.commandes_.$orderId'
+import { Route as AuthenticatedDashboardSupportNouveauRouteImport } from './routes/_authenticated/dashboard.support.nouveau'
+import { Route as AuthenticatedDashboardSupportTicketIdRouteImport } from './routes/_authenticated/dashboard.support_.$ticketId'
 import { Route as ApiPublicMediaSplatRouteImport } from './routes/api/public/media/$'
 import { Route as BSlugPProductIdRouteImport } from './routes/b.$slug.p.$productId'
 import { Route as BSlugPromoPromoIdRouteImport } from './routes/b.$slug.promo.$promoId'
@@ -137,6 +143,12 @@ const AuthenticatedAdminPlansRoute = AuthenticatedAdminPlansRouteImport.update({
   path: '/plans',
   getParentRoute: () => AuthenticatedAdminRoute,
 } as any)
+const AuthenticatedAdminSupportRoute =
+  AuthenticatedAdminSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedDashboardIndexRoute =
   AuthenticatedDashboardIndexRouteImport.update({
     id: '/',
@@ -185,6 +197,18 @@ const AuthenticatedDashboardReglagesRoute =
     path: '/reglages',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
+const AuthenticatedDashboardSupportRoute =
+  AuthenticatedDashboardSupportRouteImport.update({
+    id: '/support',
+    path: '/support',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
+const ApiCronSubscriptionRemindersRoute =
+  ApiCronSubscriptionRemindersRouteImport.update({
+    id: '/api/cron/subscription-reminders',
+    path: '/api/cron/subscription-reminders',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicInvoicePdfRoute = ApiPublicInvoicePdfRouteImport.update({
   id: '/api/public/invoice-pdf',
   path: '/api/public/invoice-pdf',
@@ -206,10 +230,28 @@ const AuthenticatedAdminBoutiquesShopIdRoute =
     path: '/boutiques/$shopId',
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminSupportTicketIdRoute =
+  AuthenticatedAdminSupportTicketIdRouteImport.update({
+    id: '/support_/$ticketId',
+    path: '/support/$ticketId',
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedDashboardCommandesOrderIdRoute =
   AuthenticatedDashboardCommandesOrderIdRouteImport.update({
     id: '/commandes_/$orderId',
     path: '/commandes/$orderId',
+    getParentRoute: () => AuthenticatedDashboardRoute,
+  } as any)
+const AuthenticatedDashboardSupportNouveauRoute =
+  AuthenticatedDashboardSupportNouveauRouteImport.update({
+    id: '/nouveau',
+    path: '/nouveau',
+    getParentRoute: () => AuthenticatedDashboardSupportRoute,
+  } as any)
+const AuthenticatedDashboardSupportTicketIdRoute =
+  AuthenticatedDashboardSupportTicketIdRouteImport.update({
+    id: '/support_/$ticketId',
+    path: '/support/$ticketId',
     getParentRoute: () => AuthenticatedDashboardRoute,
   } as any)
 const ApiPublicMediaSplatRoute = ApiPublicMediaSplatRouteImport.update({
@@ -245,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
@@ -252,13 +295,18 @@ export interface FileRoutesByFullPath {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/dashboard/support': typeof AuthenticatedDashboardSupportRouteWithChildren
+  '/api/cron/subscription-reminders': typeof ApiCronSubscriptionRemindersRoute
   '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin/': typeof AuthenticatedAdminIndexRoute
   '/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
   '/admin/boutiques/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/admin/support/$ticketId': typeof AuthenticatedAdminSupportTicketIdRoute
   '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
+  '/dashboard/support/nouveau': typeof AuthenticatedDashboardSupportNouveauRoute
+  '/dashboard/support/$ticketId': typeof AuthenticatedDashboardSupportTicketIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
   '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
@@ -277,6 +325,7 @@ export interface FileRoutesByTo {
   '/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/admin/support': typeof AuthenticatedAdminSupportRoute
   '/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
@@ -284,13 +333,18 @@ export interface FileRoutesByTo {
   '/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/dashboard/support': typeof AuthenticatedDashboardSupportRouteWithChildren
+  '/api/cron/subscription-reminders': typeof ApiCronSubscriptionRemindersRoute
   '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/admin': typeof AuthenticatedAdminIndexRoute
   '/dashboard': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug': typeof BSlugIndexRoute
   '/admin/boutiques/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/admin/support/$ticketId': typeof AuthenticatedAdminSupportTicketIdRoute
   '/dashboard/commandes/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
+  '/dashboard/support/nouveau': typeof AuthenticatedDashboardSupportNouveauRoute
+  '/dashboard/support/$ticketId': typeof AuthenticatedDashboardSupportTicketIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
   '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
@@ -314,6 +368,7 @@ export interface FileRoutesById {
   '/_authenticated/admin/paiements': typeof AuthenticatedAdminPaiementsRoute
   '/_authenticated/admin/parametres': typeof AuthenticatedAdminParametresRoute
   '/_authenticated/admin/plans': typeof AuthenticatedAdminPlansRoute
+  '/_authenticated/admin/support': typeof AuthenticatedAdminSupportRoute
   '/_authenticated/dashboard/abonnement': typeof AuthenticatedDashboardAbonnementRoute
   '/_authenticated/dashboard/boutique': typeof AuthenticatedDashboardBoutiqueRoute
   '/_authenticated/dashboard/commandes': typeof AuthenticatedDashboardCommandesRoute
@@ -321,13 +376,18 @@ export interface FileRoutesById {
   '/_authenticated/dashboard/produits': typeof AuthenticatedDashboardProduitsRoute
   '/_authenticated/dashboard/promotions': typeof AuthenticatedDashboardPromotionsRoute
   '/_authenticated/dashboard/reglages': typeof AuthenticatedDashboardReglagesRoute
+  '/_authenticated/dashboard/support': typeof AuthenticatedDashboardSupportRouteWithChildren
+  '/api/cron/subscription-reminders': typeof ApiCronSubscriptionRemindersRoute
   '/api/public/invoice-pdf': typeof ApiPublicInvoicePdfRoute
   '/api/public/webhook-saspay': typeof ApiPublicWebhookSaspayRoute
   '/_authenticated/admin/': typeof AuthenticatedAdminIndexRoute
   '/_authenticated/dashboard/': typeof AuthenticatedDashboardIndexRoute
   '/b/$slug/': typeof BSlugIndexRoute
   '/_authenticated/admin/boutiques_/$shopId': typeof AuthenticatedAdminBoutiquesShopIdRoute
+  '/_authenticated/admin/support_/$ticketId': typeof AuthenticatedAdminSupportTicketIdRoute
   '/_authenticated/dashboard/commandes_/$orderId': typeof AuthenticatedDashboardCommandesOrderIdRoute
+  '/_authenticated/dashboard/support/nouveau': typeof AuthenticatedDashboardSupportNouveauRoute
+  '/_authenticated/dashboard/support_/$ticketId': typeof AuthenticatedDashboardSupportTicketIdRoute
   '/api/public/media/$': typeof ApiPublicMediaSplatRoute
   '/b/$slug/p/$productId': typeof BSlugPProductIdRoute
   '/b/$slug/promo/$promoId': typeof BSlugPromoPromoIdRoute
@@ -351,6 +411,7 @@ export interface FileRouteTypes {
     | '/admin/paiements'
     | '/admin/parametres'
     | '/admin/plans'
+    | '/admin/support'
     | '/dashboard/abonnement'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
@@ -358,13 +419,18 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/dashboard/support'
+    | '/api/cron/subscription-reminders'
     | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/admin/'
     | '/dashboard/'
     | '/b/$slug/'
     | '/admin/boutiques/$shopId'
+    | '/admin/support/$ticketId'
     | '/dashboard/commandes/$orderId'
+    | '/dashboard/support/nouveau'
+    | '/dashboard/support/$ticketId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
     | '/b/$slug/promo/$promoId'
@@ -383,6 +449,7 @@ export interface FileRouteTypes {
     | '/admin/paiements'
     | '/admin/parametres'
     | '/admin/plans'
+    | '/admin/support'
     | '/dashboard/abonnement'
     | '/dashboard/boutique'
     | '/dashboard/commandes'
@@ -390,13 +457,18 @@ export interface FileRouteTypes {
     | '/dashboard/produits'
     | '/dashboard/promotions'
     | '/dashboard/reglages'
+    | '/dashboard/support'
+    | '/api/cron/subscription-reminders'
     | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/admin'
     | '/dashboard'
     | '/b/$slug'
     | '/admin/boutiques/$shopId'
+    | '/admin/support/$ticketId'
     | '/dashboard/commandes/$orderId'
+    | '/dashboard/support/nouveau'
+    | '/dashboard/support/$ticketId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
     | '/b/$slug/promo/$promoId'
@@ -419,6 +491,7 @@ export interface FileRouteTypes {
     | '/_authenticated/admin/paiements'
     | '/_authenticated/admin/parametres'
     | '/_authenticated/admin/plans'
+    | '/_authenticated/admin/support'
     | '/_authenticated/dashboard/abonnement'
     | '/_authenticated/dashboard/boutique'
     | '/_authenticated/dashboard/commandes'
@@ -426,13 +499,18 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard/produits'
     | '/_authenticated/dashboard/promotions'
     | '/_authenticated/dashboard/reglages'
+    | '/_authenticated/dashboard/support'
+    | '/api/cron/subscription-reminders'
     | '/api/public/invoice-pdf'
     | '/api/public/webhook-saspay'
     | '/_authenticated/admin/'
     | '/_authenticated/dashboard/'
     | '/b/$slug/'
     | '/_authenticated/admin/boutiques_/$shopId'
+    | '/_authenticated/admin/support_/$ticketId'
     | '/_authenticated/dashboard/commandes_/$orderId'
+    | '/_authenticated/dashboard/support/nouveau'
+    | '/_authenticated/dashboard/support_/$ticketId'
     | '/api/public/media/$'
     | '/b/$slug/p/$productId'
     | '/b/$slug/promo/$promoId'
@@ -448,6 +526,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute
   AbonnementRetourRoute: typeof AbonnementRetourRoute
   BSlugRoute: typeof BSlugRouteWithChildren
+  ApiCronSubscriptionRemindersRoute: typeof ApiCronSubscriptionRemindersRoute
   ApiPublicInvoicePdfRoute: typeof ApiPublicInvoicePdfRoute
   ApiPublicWebhookSaspayRoute: typeof ApiPublicWebhookSaspayRoute
   ApiPublicMediaSplatRoute: typeof ApiPublicMediaSplatRoute
@@ -581,6 +660,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminPlansRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/support': {
+      id: '/_authenticated/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AuthenticatedAdminSupportRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/dashboard/': {
       id: '/_authenticated/dashboard/'
       path: '/'
@@ -637,6 +723,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedDashboardReglagesRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
+    '/_authenticated/dashboard/support': {
+      id: '/_authenticated/dashboard/support'
+      path: '/support'
+      fullPath: '/dashboard/support'
+      preLoaderRoute: typeof AuthenticatedDashboardSupportRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
+    '/api/cron/subscription-reminders': {
+      id: '/api/cron/subscription-reminders'
+      path: '/api/cron/subscription-reminders'
+      fullPath: '/api/cron/subscription-reminders'
+      preLoaderRoute: typeof ApiCronSubscriptionRemindersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/invoice-pdf': {
       id: '/api/public/invoice-pdf'
       path: '/api/public/invoice-pdf'
@@ -665,11 +765,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminBoutiquesShopIdRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    '/_authenticated/admin/support_/$ticketId': {
+      id: '/_authenticated/admin/support_/$ticketId'
+      path: '/support/$ticketId'
+      fullPath: '/admin/support/$ticketId'
+      preLoaderRoute: typeof AuthenticatedAdminSupportTicketIdRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     '/_authenticated/dashboard/commandes_/$orderId': {
       id: '/_authenticated/dashboard/commandes_/$orderId'
       path: '/commandes/$orderId'
       fullPath: '/dashboard/commandes/$orderId'
       preLoaderRoute: typeof AuthenticatedDashboardCommandesOrderIdRouteImport
+      parentRoute: typeof AuthenticatedDashboardRoute
+    }
+    '/_authenticated/dashboard/support/nouveau': {
+      id: '/_authenticated/dashboard/support/nouveau'
+      path: '/nouveau'
+      fullPath: '/dashboard/support/nouveau'
+      preLoaderRoute: typeof AuthenticatedDashboardSupportNouveauRouteImport
+      parentRoute: typeof AuthenticatedDashboardSupportRoute
+    }
+    '/_authenticated/dashboard/support_/$ticketId': {
+      id: '/_authenticated/dashboard/support_/$ticketId'
+      path: '/support/$ticketId'
+      fullPath: '/dashboard/support/$ticketId'
+      preLoaderRoute: typeof AuthenticatedDashboardSupportTicketIdRouteImport
       parentRoute: typeof AuthenticatedDashboardRoute
     }
     '/api/public/media/$': {
@@ -702,8 +823,10 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminPaiementsRoute: typeof AuthenticatedAdminPaiementsRoute
   AuthenticatedAdminParametresRoute: typeof AuthenticatedAdminParametresRoute
   AuthenticatedAdminPlansRoute: typeof AuthenticatedAdminPlansRoute
+  AuthenticatedAdminSupportRoute: typeof AuthenticatedAdminSupportRoute
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
   AuthenticatedAdminBoutiquesShopIdRoute: typeof AuthenticatedAdminBoutiquesShopIdRoute
+  AuthenticatedAdminSupportTicketIdRoute: typeof AuthenticatedAdminSupportTicketIdRoute
 }
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
@@ -712,13 +835,31 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminPaiementsRoute: AuthenticatedAdminPaiementsRoute,
   AuthenticatedAdminParametresRoute: AuthenticatedAdminParametresRoute,
   AuthenticatedAdminPlansRoute: AuthenticatedAdminPlansRoute,
+  AuthenticatedAdminSupportRoute: AuthenticatedAdminSupportRoute,
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
   AuthenticatedAdminBoutiquesShopIdRoute:
     AuthenticatedAdminBoutiquesShopIdRoute,
+  AuthenticatedAdminSupportTicketIdRoute:
+    AuthenticatedAdminSupportTicketIdRoute,
 }
 
 const AuthenticatedAdminRouteWithChildren =
   AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedDashboardSupportRouteChildren {
+  AuthenticatedDashboardSupportNouveauRoute: typeof AuthenticatedDashboardSupportNouveauRoute
+}
+
+const AuthenticatedDashboardSupportRouteChildren: AuthenticatedDashboardSupportRouteChildren =
+  {
+    AuthenticatedDashboardSupportNouveauRoute:
+      AuthenticatedDashboardSupportNouveauRoute,
+  }
+
+const AuthenticatedDashboardSupportRouteWithChildren =
+  AuthenticatedDashboardSupportRoute._addFileChildren(
+    AuthenticatedDashboardSupportRouteChildren,
+  )
 
 interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardAbonnementRoute: typeof AuthenticatedDashboardAbonnementRoute
@@ -728,8 +869,10 @@ interface AuthenticatedDashboardRouteChildren {
   AuthenticatedDashboardProduitsRoute: typeof AuthenticatedDashboardProduitsRoute
   AuthenticatedDashboardPromotionsRoute: typeof AuthenticatedDashboardPromotionsRoute
   AuthenticatedDashboardReglagesRoute: typeof AuthenticatedDashboardReglagesRoute
+  AuthenticatedDashboardSupportRoute: typeof AuthenticatedDashboardSupportRouteWithChildren
   AuthenticatedDashboardIndexRoute: typeof AuthenticatedDashboardIndexRoute
   AuthenticatedDashboardCommandesOrderIdRoute: typeof AuthenticatedDashboardCommandesOrderIdRoute
+  AuthenticatedDashboardSupportTicketIdRoute: typeof AuthenticatedDashboardSupportTicketIdRoute
 }
 
 const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
@@ -743,9 +886,13 @@ const AuthenticatedDashboardRouteChildren: AuthenticatedDashboardRouteChildren =
     AuthenticatedDashboardPromotionsRoute:
       AuthenticatedDashboardPromotionsRoute,
     AuthenticatedDashboardReglagesRoute: AuthenticatedDashboardReglagesRoute,
+    AuthenticatedDashboardSupportRoute:
+      AuthenticatedDashboardSupportRouteWithChildren,
     AuthenticatedDashboardIndexRoute: AuthenticatedDashboardIndexRoute,
     AuthenticatedDashboardCommandesOrderIdRoute:
       AuthenticatedDashboardCommandesOrderIdRoute,
+    AuthenticatedDashboardSupportTicketIdRoute:
+      AuthenticatedDashboardSupportTicketIdRoute,
   }
 
 const AuthenticatedDashboardRouteWithChildren =
@@ -792,6 +939,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   AbonnementRetourRoute: AbonnementRetourRoute,
   BSlugRoute: BSlugRouteWithChildren,
+  ApiCronSubscriptionRemindersRoute: ApiCronSubscriptionRemindersRoute,
   ApiPublicInvoicePdfRoute: ApiPublicInvoicePdfRoute,
   ApiPublicWebhookSaspayRoute: ApiPublicWebhookSaspayRoute,
   ApiPublicMediaSplatRoute: ApiPublicMediaSplatRoute,

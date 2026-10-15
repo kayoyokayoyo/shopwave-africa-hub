@@ -15,19 +15,22 @@ import {
   Settings,
   CreditCard,
   X,
+  LifeBuoy,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { useMyShop } from "@/hooks/useMyShop";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
+import { myUnreadSupportCount } from "@/lib/support.functions";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardLayout,
 });
 
-// Desktop Navigation (Promotions right after Produits)
+// Desktop Navigation
 const DESKTOP_NAV = [
   { to: "/dashboard", label: "Accueil", icon: Home, exact: true },
   { to: "/dashboard/produits", label: "Produits", icon: Package },
@@ -35,6 +38,7 @@ const DESKTOP_NAV = [
   { to: "/dashboard/commandes", label: "Commandes", icon: ShoppingBag },
   { to: "/dashboard/boutique", label: "Boutique", icon: Palette },
   { to: "/dashboard/meta", label: "Réseaux", icon: Share2 },
+  { to: "/dashboard/support", label: "Support", icon: LifeBuoy },
 ] as const;
 
 function DashboardLayout() {
@@ -61,10 +65,23 @@ function DashboardLayout() {
     refetchInterval: 30000,
   });
 
-  // Check shop completion and meta connection for notification dots
+  // Compteur de réponses support non lues
+  const unreadSupportFn = useServerFn(myUnreadSupportCount);
+  const { data: supportUnreadData } = useQuery({
+    queryKey: ["mySupportUnread"],
+    enabled: !!shop?.id,
+    queryFn: async () => {
+      const res = await unreadSupportFn();
+      return res?.count ?? 0;
+    },
+    refetchInterval: 30000,
+  });
+  const supportUnread = supportUnreadData ?? 0;
+
+  // Check shop completion, meta connection and support unread for notification dots
   const isShopIncomplete = !shop?.logo_url || !shop?.banner_url || !shop?.description;
   const isMetaDisconnected = !shop?.facebook && !shop?.instagram;
-  const hasPlusBadge = isShopIncomplete || isMetaDisconnected;
+  const hasPlusBadge = isShopIncomplete || isMetaDisconnected || supportUnread > 0;
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window !== "undefined") {
@@ -107,7 +124,8 @@ function DashboardLayout() {
     currentPath.startsWith("/dashboard/boutique") ||
     currentPath.startsWith("/dashboard/meta") ||
     currentPath.startsWith("/dashboard/abonnement") ||
-    currentPath.startsWith("/dashboard/reglages");
+    currentPath.startsWith("/dashboard/reglages") ||
+    currentPath.startsWith("/dashboard/support");
 
   return (
     <div className="min-h-screen bg-background lg:flex">
@@ -171,7 +189,10 @@ function DashboardLayout() {
 
           <nav className={cn("mt-8 flex-1 overflow-y-auto no-scrollbar", collapsed ? "space-y-2" : "space-y-1.5")}>
             {DESKTOP_NAV.map((n) => {
-              const count = n.label === "Commandes" ? newOrdersCount || 0 : 0;
+              const count =
+                n.label === "Commandes" ? newOrdersCount || 0
+                : n.label === "Support" ? supportUnread
+                : 0;
               return (
                 <Link
                   key={n.to}
@@ -487,6 +508,36 @@ function DashboardLayout() {
                   <div>
                     <span className="font-bold text-sm">Abonnement</span>
                     <p className="text-xs text-muted-foreground">Formule active, renouvellement, paiements</p>
+                  </div>
+                </div>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              </Link>
+
+              {/* Support */}
+              <Link
+                to="/dashboard/support"
+                onClick={() => setPlusOpen(false)}
+                className="flex items-center justify-between rounded-2xl border p-4 hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600">
+                    <LifeBuoy className="h-5 w-5" />
+                    {supportUnread > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-500 px-1 text-[9px] font-bold text-white">
+                        {supportUnread}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm">Support</span>
+                      {supportUnread > 0 && (
+                        <span className="rounded-full bg-blue-500 px-2 py-0.5 text-[10px] font-bold text-white">
+                          {supportUnread} nouveau{supportUnread > 1 ? "x" : ""}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Tickets, aide, assistance</p>
                   </div>
                 </div>
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />

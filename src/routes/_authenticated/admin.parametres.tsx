@@ -46,6 +46,7 @@ function Settings() {
       const initData = {
         platform_name: settings.platform_name ?? "MarketNet",
         contact_email: settings.contact_email ?? "",
+        support_email: settings.support_email ?? "",
         payment_instructions: settings.payment_instructions ?? "",
       };
       setForm(initData);
@@ -155,18 +156,32 @@ function Settings() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /> Email de support principal</Label>
+                    <Label className="flex items-center gap-2"><Mail className="h-4 w-4 text-muted-foreground" /> Email de contact général</Label>
                     <Input 
                       type="email" 
                       className={inputClass("general")} 
                       value={form.contact_email} 
                       onChange={e => setForm({...form, contact_email: e.target.value})} 
-                      placeholder="support@marketnet.com" 
+                      placeholder="contact@marketnet.com" 
                       readOnly={editingTab !== "general"}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Mail className="h-4 w-4 text-amber-500" /> Email de notification Support</Label>
+                    <Input 
+                      type="email" 
+                      className={inputClass("general")} 
+                      value={form.support_email} 
+                      onChange={e => setForm({...form, support_email: e.target.value})} 
+                      placeholder="support@marketnet.com (laisser vide pour utiliser l'email de contact)" 
+                      readOnly={editingTab !== "general"}
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      Reçoit les notifications d'alerte lors de la création d'un nouveau ticket commerçant.
+                    </p>
+                  </div>
                   <div className="flex justify-end pt-2 border-t border-dashed mt-4">
-                    {renderActionButtons("general", ["platform_name", "contact_email"])}
+                    {renderActionButtons("general", ["platform_name", "contact_email", "support_email"])}
                   </div>
                 </div>
               </div>
